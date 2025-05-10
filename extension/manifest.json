@@ -1,0 +1,71 @@
+{
+  "manifest_version": 3,
+  "name": "AI Chat Relay",
+  "version": "1.0",
+  "description": "Relays messages between an OpenAI-compatible API server and chat interfaces",
+  "permissions": [
+    "scripting",
+    "storage",
+    "alarms",
+    "debugger",
+    "tabs"
+  ],
+  "optional_permissions": [
+  ],
+  "host_permissions": [
+    "*://*.google.com/*",
+    "*://*.chatgpt.com/*",
+    "*://*.aistudio.com/*",
+    "*://*.claude.ai/*",
+    "ws://localhost:*/"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.chatgpt.com/*"],
+      "js": [
+        "providers/provider-utils.js",
+        "providers/chatgpt.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://aistudio.google.com/*"],
+      "js": [
+        "providers/provider-utils.js",
+        "providers/aistudio.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://claude.ai/*"],
+      "js": [
+        "providers/provider-utils.js",
+        "providers/claude.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://gemini.google.com/*"],
+      "js": [
+        "providers/provider-utils.js",
+        "providers/gemini.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "AI Chat Relay",
+    "default_popup": "popup.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}

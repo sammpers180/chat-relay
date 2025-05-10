@@ -1,0 +1,30 @@
+# Set default behavior, in case users don't have core.autocrlf set.
+* text=auto
+
+# Explicitly declare text files you want to always normalize and convert to LF in the repo
+*.js    text eol=lf
+*.ts    text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.xml   text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.svg   text eol=lf
+
+# Declare files that will always have CRLF line endings on checkout.
+# *.bat   text eol=crlf
+# *.cmd   text eol=crlf
+# *.ps1   text eol=crlf
+
+# Declare files that should not be touched (binary files)
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.zip   binary
+*.gz    binary
+*.tgz   binary

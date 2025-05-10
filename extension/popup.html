@@ -1,0 +1,81 @@
+<!--
+  Chat Relay: Relay for AI Chat Interfaces
+  Copyright (C) 2025 Jamison Moore
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as
+  published by the Free Software Foundation, either version 3 of the
+  License, or (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see https://www.gnu.org/licenses/.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Chat Relay</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      width: 300px;
+      padding: 15px;
+    }
+    h1 {
+      font-size: 18px;
+      margin-top: 0;
+    }
+    .status {
+      margin: 10px 0;
+      padding: 8px;
+      border-radius: 4px;
+    }
+    .connected {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .disconnected {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    button {
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+      width: 100%;
+    }
+    button:hover {
+      background-color: #3367d6;
+    }
+    .footer {
+      margin-top: 15px;
+      font-size: 12px;
+      color: #666;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>AI Chat Relay</h1>
+  
+  <div id="connectionStatus" class="status disconnected">
+    Checking connection status...
+  </div>
+  
+  <button id="openOptions">Open Settings</button>
+  
+  <div class="footer">
+    <p>Current server: <span id="serverUrl">ws://localhost:3003</span></p>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
