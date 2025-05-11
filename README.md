@@ -98,6 +98,18 @@ An optional developer utility server for simulating messages, testing extensions
 
 ---
 
+## Important Considerations & Responsible Use
+
+**Compliance with Provider Terms:** Users of Chat Relay are solely responsible for ensuring that their use of this tool complies with the terms of service, usage policies, and any other relevant agreements of the AI service providers they access through Chat Relay (e.g., OpenAI, Google, Anthropic).
+
+**Respect Provider Limits:** It is crucial to be mindful of and respect any rate limits, usage quotas, or other restrictions imposed by the AI service providers. Automating interactions can potentially exceed these limits if not managed carefully.
+
+**Avoid System Disruption:** Do not use Chat Relay in any manner that could disrupt, overburden, or impair the services of the AI providers. Responsible use includes avoiding excessive requests or any activity that could negatively impact the stability or performance of their systems.
+
+**User Responsibility:** By using Chat Relay, you acknowledge that you understand these considerations and agree to use the tool responsibly and at your own risk concerning compliance with third-party provider terms. The developers of Chat Relay assume no liability for misuse or violations of third-party terms of service.
+
+---
+
 ## Installation & Setup
 
 ### Prerequisites
