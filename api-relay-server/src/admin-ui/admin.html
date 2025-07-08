@@ -26,58 +26,327 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
             margin: 0;
             padding: 0;
-            background-color: #f0f2f5; /* Lighter gray */
-            color: #1c1e21; /* Darker text for better contrast */
+            background-color: #f0f2f5;
+            color: #1c1e21;
             line-height: 1.6;
         }
         header {
-            background-color: #1877f2; /* Facebook blue */
+            background: linear-gradient(135deg, #1877f2 0%, #4285f4 100%);
             color: #fff;
-            padding: 1em 1.5em;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1.5em;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .chat-bubble {
+            width: 40px;
+            height: 40px;
+            background-color: #fff;
+            border-radius: 50%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .chat-bubble::before {
+            content: '';
+            width: 24px;
+            height: 24px;
+            background-color: #1877f2;
+            border-radius: 50%;
+            position: relative;
+        }
+        .chat-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid #fff;
         }
         header h1 {
             margin: 0;
-            font-size: 1.8em;
+            font-size: 2em;
+            font-weight: 300;
         }
         nav {
-            background-color: #fff; /* White background for nav */
-            padding: 0.75em 1.5em;
-            border-bottom: 1px solid #dddfe2; /* Light border */
+            background-color: #fff;
+            padding: 0;
+            border-bottom: 1px solid #dddfe2;
             box-shadow: 0 2px 2px -2px rgba(0,0,0,0.05);
+        }
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2em;
         }
         nav ul {
             list-style-type: none;
             padding: 0;
             margin: 0;
-            text-align: center;
+            display: flex;
+            gap: 0;
         }
         nav ul li {
-            display: inline;
-            margin-right: 25px;
+            margin: 0;
         }
         nav ul li a {
-            color: #1877f2; /* Blue links */
+            color: #65676b;
             text-decoration: none;
-            font-weight: 600; /* Slightly bolder */
-            padding: 0.5em 0;
-            transition: color 0.2s ease;
+            font-weight: 500;
+            padding: 1em 1.5em;
+            display: block;
+            transition: all 0.2s ease;
+            border-bottom: 3px solid transparent;
         }
         nav ul li a:hover {
-            color: #1159bd; /* Darker blue on hover */
+            color: #1c1e21;
+            background-color: #f8f9fa;
         }
         nav ul li a.active {
-            color: #1c1e21; /* Darker color for active tab */
+            color: #1c1e21;
             border-bottom: 3px solid #1877f2;
+            font-weight: 600;
         }
         .container {
-            padding: 1.5em;
-            max-width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2em;
             box-sizing: border-box;
         }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        
+        /* Settings Layout */
+        .settings-main {
+            background-color: #f8f9fa;
+            min-height: calc(100vh - 200px);
+            padding: 2em 0;
+        }
+        .settings-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 1.5em;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2em;
+        }
+        .settings-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5em;
+        }
+        .form-section {
+            background-color: #fff;
+            border-radius: 12px;
+            padding: 1.5em;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .form-section h2 {
+            margin: 0 0 1em 0;
+            font-size: 1.25em;
+            font-weight: 600;
+            color: #1c1e21;
+            border: none;
+            padding: 0;
+        }
+        .form-group {
+            margin-bottom: 1em;
+        }
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5em;
+            font-weight: 500;
+            color: #1c1e21;
+        }
+        .form-group input[type="number"],
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 0.75em;
+            border: 1px solid #dddfe2;
+            border-radius: 6px;
+            font-size: 0.95em;
+            transition: border-color 0.2s ease;
+            box-sizing: border-box;
+        }
+        .form-group input[type="number"]:focus,
+        .form-group input[type="text"]:focus {
+            outline: none;
+            border-color: #1877f2;
+            box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+        }
+        .radio-group {
+            display: flex;
+            gap: 1em;
+            margin-top: 0.5em;
+        }
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+            padding: 0.5em 1em;
+            border: 1px solid #dddfe2;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .radio-option:hover {
+            background-color: #f8f9fa;
+        }
+        .radio-option input[type="radio"] {
+            margin: 0;
+        }
+        .radio-option input[type="radio"]:checked + span {
+            font-weight: 600;
+        }
+        .toggle-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            display: inline-block;
+        }
+        .toggle-switch input[type="checkbox"] {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 24px;
+            z-index: 1;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+            z-index: 2;
+        }
+        .toggle-switch input[type="checkbox"]:checked + .slider {
+            background-color: #1877f2;
+        }
+        .toggle-switch input[type="checkbox"]:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        .toggle-switch:hover .slider {
+            box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+        }
+        
+        /* Logs Panel */
+        .logs-panel {
+            background-color: #2d3748;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .logs-header {
+            background-color: #4a5568;
+            padding: 1em 1.5em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #fff;
+        }
+        .logs-header h3 {
+            margin: 0;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+        .expand-icon {
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .logs-content {
+            padding: 1em;
+            height: 60vh;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.85em;
+            line-height: 1.4;
+        }
+        .log-entry {
+            margin-bottom: 0.5em;
+            padding: 0.25em 0;
+        }
+        .log-entry.info {
+            color: #68d391;
+        }
+        .log-entry.warn {
+            color: #fbb040;
+        }
+        .log-entry.error {
+            color: #f56565;
+        }
+        
+        /* Form Actions */
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1em;
+            max-width: 1400px;
+            margin: 1em auto 0 auto;
+            padding: 0 2em 2em 2em;
+        }
+        .btn {
+            padding: 0.75em 2em;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-primary {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #218838;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+        
         h2 {
             border-bottom: 2px solid #dddfe2;
             padding-bottom: 0.5em;
@@ -245,13 +514,20 @@
 </head>
 <body>
     <header>
-        <h1>Chat Relay Admin Dashboard</h1>
+        <div class="header-content">
+            <div class="logo">
+                <div class="chat-bubble"></div>
+                <h1>Chat Relay</h1>
+            </div>
+        </div>
     </header>
     <nav>
-        <ul>
-            <li><a href="#" class="tab-link active" data-tab="messages">Messages</a></li>
-            <li><a href="#" class="tab-link" data-tab="settings">Settings</a></li>
-        </ul>
+        <div class="nav-container">
+            <ul>
+                <li><a href="#" class="tab-link active" data-tab="messages">Messages</a></li>
+                <li><a href="#" class="tab-link" data-tab="settings">Settings</a></li>
+            </ul>
+        </div>
     </nav>
     <div class="container">
         <div id="messages" class="tab-content active">
@@ -283,32 +559,73 @@
             </table>
         </div>
         <div id="settings" class="tab-content">
-            <h2>Configuration Settings</h2>
-            <div id="settings-content">
-                <div>
-                    <label for="port-input">Server Port: </label>
-                    <input type="number" id="port-input" style="width: 80px;">
-                    <small>(Requires server restart to apply)</small>
-                </div>
-                <div style="margin-top: 0.5em;">
-                    <label for="request-timeout-input">Request Timeout (ms): </label>
-                    <input type="number" id="request-timeout-input" style="width: 100px;">
-                </div>
-                <div style="margin-top: 0.5em;">
-                    <label>New Request Behavior (if extension busy):</label>
-                    <div>
-                        <input type="radio" id="newRequestBehaviorQueue" name="newRequestBehavior" value="queue" checked>
-                        <label for="newRequestBehaviorQueue">Queue</label>
+            <main class="settings-main">
+                <div class="settings-content">
+                    <div class="settings-form">
+                        <div class="form-section">
+                            <h2>Server</h2>
+                            <div class="form-group">
+                                <label for="port-input">Server Port</label>
+                                <input type="number" id="port-input" value="3003">
+                            </div>
+                            <div class="form-group">
+                                <label for="request-timeout-input">Request Timeout</label>
+                                <input type="number" id="request-timeout-input" value="300000">
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h2>Request Handling</h2>
+                            <div class="form-group">
+                                <label>Queue</label>
+                                <div class="radio-group">
+                                    <label class="radio-option">
+                                        <input type="radio" id="newRequestBehaviorQueue" name="newRequestBehavior" value="queue" checked>
+                                        <span>Queue</span>
+                                    </label>
+                                    <label class="radio-option">
+                                        <input type="radio" id="newRequestBehaviorDrop" name="newRequestBehavior" value="drop">
+                                        <span>Drop</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group toggle-group">
+                                <label for="auto-kill-port-input">Auto-kill conflicting process</label>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="auto-kill-port-input" checked>
+                                    <span class="slider"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h2>Heartbeat</h2>
+                            <div class="form-group">
+                                <label for="setting-ping-interval-input">Ping interval (ms)</label>
+                                <input type="text" id="setting-ping-interval-input" value="Disabled" readonly>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <input type="radio" id="newRequestBehaviorDrop" name="newRequestBehavior" value="drop">
-                        <label for="newRequestBehaviorDrop">Drop</label>
+
+                    <div class="logs-panel">
+                        <div class="logs-header">
+                            <h3>Logs</h3>
+                            <span class="expand-icon">→</span>
+                        </div>
+                        <div class="logs-content" id="logs-content">
+                            <div class="log-entry info">[INFO] Server started</div>
+                            <div class="log-entry warn">[WARN] High memory usage</div>
+                            <div class="log-entry error">[ERROR] Failed to connect</div>
+                            <div class="log-entry error">[ERROR] Failed to connect</div>
+                        </div>
                     </div>
                 </div>
-                <button id="save-settings-btn" style="margin-top: 1em; margin-bottom: 0.5em;">Save Settings</button>
+
+                <div class="form-actions">
+                    <button class="btn btn-primary" id="save-settings-btn">Save</button>
+                </div>
                 <span id="update-status-msg" style="margin-left: 10px; font-style: italic;"></span>
-                <p style="margin-top: 1em;">Ping Interval (ms): <span id="setting-ping-interval"></span></p>
-            </div>
+            </main>
         </div>
         <!-- Status tab content removed as its elements are moved to the Messages tab -->
     </div>
@@ -339,6 +656,47 @@
                 }
             });
         });
+        
+        // New logs panel functionality
+        async function updateLogsPanel() {
+            const logsContent = document.getElementById('logs-content');
+            if (logsContent) {
+                try {
+                    // Fetch real logs from the server
+                    const response = await fetch('/admin/logs');
+                    if (response.ok) {
+                        const logs = await response.json();
+                        if (logs && logs.length > 0) {
+                            // Display the most recent logs first
+                            const recentLogs = logs.slice(-20).reverse();
+                            logsContent.innerHTML = recentLogs.map(log => {
+                                const timestamp = new Date(log.timestamp).toLocaleTimeString();
+                                return `<div class="log-entry ${log.level}">[${timestamp}] ${log.message}</div>`;
+                            }).join('');
+                            // Auto-scroll to top to show newest logs
+                            logsContent.scrollTop = 0;
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching logs:', error);
+                }
+                
+                // Show sample logs as fallback
+                const sampleLogs = [
+                    { type: 'info', message: '[INFO] Server started' },
+                    { type: 'warn', message: '[WARN] High memory usage' },
+                    { type: 'error', message: '[ERROR] Failed to connect' },
+                    { type: 'error', message: '[ERROR] Failed to connect' }
+                ];
+                
+                logsContent.innerHTML = sampleLogs.map(log =>
+                    `<div class="log-entry ${log.type}">${log.message}</div>`
+                ).join('');
+            }
+        }
+        
+        
         function toggleLogWindow() {
             const logWindow = document.getElementById('log-window-content');
             if (logWindow.style.display === 'none') {
@@ -482,9 +840,10 @@
         const requestTimeoutInputEl = document.getElementById('request-timeout-input');
         const newRequestBehaviorQueueEl = document.getElementById('newRequestBehaviorQueue');
         const newRequestBehaviorDropEl = document.getElementById('newRequestBehaviorDrop');
+        const autoKillPortInputEl = document.getElementById('auto-kill-port-input');
         const saveSettingsBtn = document.getElementById('save-settings-btn');
         const updateStatusMsgEl = document.getElementById('update-status-msg');
-        const settingPingIntervalEl = document.getElementById('setting-ping-interval');
+        const settingPingIntervalEl = document.getElementById('setting-ping-interval-input');
         // References for status elements (declared once)
         const statusUptimeEl = document.getElementById('status-uptime');
         const statusConnectedExtensionsEl = document.getElementById('status-connected-extensions');
@@ -516,6 +875,8 @@
                 }
                 const currentSettings = await response.json();
 
+                console.log('fetchAndDisplayServerInfo received settings:', currentSettings);
+                
                 // Populate Settings using the new response structure
                 if(portInputEl) portInputEl.value = currentSettings.serverPort || '';
                 if(requestTimeoutInputEl) requestTimeoutInputEl.value = currentSettings.requestTimeout !== null ? currentSettings.requestTimeout : '';
@@ -526,6 +887,11 @@
                     if(newRequestBehaviorDropEl) newRequestBehaviorDropEl.checked = true;
                 } else {
                     if(newRequestBehaviorQueueEl) newRequestBehaviorQueueEl.checked = true; // Default to queue
+                }
+                
+                if (autoKillPortInputEl) {
+                    console.log('fetchAndDisplayServerInfo: Setting autoKillPort checkbox to:', currentSettings.autoKillPort);
+                    autoKillPortInputEl.checked = currentSettings.autoKillPort === true;
                 }
 
                 // Populate Status - Assuming server-info might still be used for uptime/connections or these are separate
@@ -548,20 +914,24 @@
                     const serverInfoForStatus = await statusResponse.json();
                     if(statusUptimeEl) statusUptimeEl.textContent = formatUptime(serverInfoForStatus.uptimeSeconds);
                     if(statusConnectedExtensionsEl) statusConnectedExtensionsEl.textContent = serverInfoForStatus.connectedExtensionsCount !== null ? serverInfoForStatus.connectedExtensionsCount : 'N/A';
-                    if(settingPingIntervalEl && serverInfoForStatus.pingIntervalMs !== undefined) settingPingIntervalEl.textContent = serverInfoForStatus.pingIntervalMs !== null ? `${serverInfoForStatus.pingIntervalMs} ms` : 'N/A (Not Implemented)';
+                    if(settingPingIntervalEl && serverInfoForStatus.pingIntervalMs !== undefined) {
+                        settingPingIntervalEl.value = serverInfoForStatus.pingIntervalMs !== null ? `${serverInfoForStatus.pingIntervalMs}` : 'Disabled';
+                    } else if(settingPingIntervalEl) {
+                        settingPingIntervalEl.value = 'Disabled';
+                    }
                 } else {
                     // Handle case where statusResponse itself is not ok
                     console.warn(`Failed to fetch status from /v1/admin/server-info: ${statusResponse.status}`);
                     if(statusUptimeEl) statusUptimeEl.textContent = 'Status N/A';
                     if(statusConnectedExtensionsEl) statusConnectedExtensionsEl.textContent = 'Status N/A';
-                    if(settingPingIntervalEl) settingPingIntervalEl.textContent = 'Status N/A';
+                    if(settingPingIntervalEl) settingPingIntervalEl.value = 'Disabled';
                 }
             } catch (error) { // This is the single catch block for the try starting at line 310
                 console.error('Error in fetchAndDisplayServerInfo:', error);
                 // Set all relevant fields to an error state
                 if(portInputEl) portInputEl.value = 'Error';
                 if(requestTimeoutInputEl) requestTimeoutInputEl.value = 'Error';
-                if(settingPingIntervalEl) settingPingIntervalEl.textContent = 'Error';
+                if(settingPingIntervalEl) settingPingIntervalEl.value = 'Disabled';
                 if(newRequestBehaviorQueueEl) newRequestBehaviorQueueEl.checked = true; // Default on error
                 if(statusUptimeEl) statusUptimeEl.textContent = 'Error loading';
                 if(statusConnectedExtensionsEl) statusConnectedExtensionsEl.textContent = 'Error loading';
@@ -603,6 +973,10 @@
             // UPDATED: Key name for server
             settingsToUpdate.messageSendStrategy = selectedNewRequestBehavior;
             
+            // Always include autoKillPort as it's controlled by checkbox
+            settingsToUpdate.autoKillPort = autoKillPortInputEl ? autoKillPortInputEl.checked : false;
+            console.log('Saving autoKillPort setting:', settingsToUpdate.autoKillPort);
+            
             if (validationError) {
                 updateStatusMsgEl.textContent = messages.join(' ');
                 updateStatusMsgEl.style.color = 'red';
@@ -621,6 +995,7 @@
             updateStatusMsgEl.style.color = 'orange';
 
             try {
+                console.log('Sending settings to server:', settingsToUpdate);
                 // UPDATED: Endpoint for saving settings
                 const response = await fetch('/admin/settings', {
                     method: 'POST',
@@ -628,6 +1003,11 @@
                     body: JSON.stringify(settingsToUpdate)
                 });
                 const result = await response.json();
+                console.log('Server response:', result);
+                console.log('Server currentSettings:', result.currentSettings);
+                if (result.currentSettings) {
+                    console.log('Server returned autoKillPort:', result.currentSettings.autoKillPort);
+                }
                 if (response.ok) {
                     updateStatusMsgEl.textContent = result.message || 'Settings updated successfully!';
                     updateStatusMsgEl.style.color = 'green';
@@ -717,6 +1097,43 @@
             });
         });
  
+        // Initialize settings with default values if not already set
+        function initializeDefaultSettings() {
+            console.log('Initializing default settings...');
+            if (portInputEl && !portInputEl.value) portInputEl.value = '3003';
+            if (requestTimeoutInputEl && !requestTimeoutInputEl.value) requestTimeoutInputEl.value = '300000';
+            if (settingPingIntervalEl && !settingPingIntervalEl.value) settingPingIntervalEl.value = 'Disabled';
+            if (autoKillPortInputEl) {
+                console.log('Auto-kill toggle element found, current checked state:', autoKillPortInputEl.checked);
+                // Test if the toggle is working by adding a click event listener
+                autoKillPortInputEl.addEventListener('change', function() {
+                    console.log('Auto-kill toggle changed to:', this.checked);
+                });
+                
+                // Also add click listener to the slider element to ensure it works
+                const sliderEl = autoKillPortInputEl.nextElementSibling;
+                if (sliderEl && sliderEl.classList.contains('slider')) {
+                    sliderEl.addEventListener('click', function() {
+                        console.log('Slider clicked, toggling checkbox');
+                        autoKillPortInputEl.checked = !autoKillPortInputEl.checked;
+                        autoKillPortInputEl.dispatchEvent(new Event('change'));
+                    });
+                }
+            }
+            if (newRequestBehaviorQueueEl && !newRequestBehaviorQueueEl.checked && !newRequestBehaviorDropEl.checked) {
+                newRequestBehaviorQueueEl.checked = true;
+            }
+        }
+        
+        // Initialize default settings
+        setTimeout(initializeDefaultSettings, 1000);
+        
+        // Initialize logs panel
+        updateLogsPanel();
+        
+        // Update logs panel every 2 seconds for real-time logs
+        setInterval(updateLogsPanel, 2000);
+        
         console.log("Admin UI initialized. Message history, settings, status, restart, and collapsible columns functionality implemented.");
     </script>
 </body>

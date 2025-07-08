@@ -4,7 +4,8 @@ PORT=3003
 # Valid values: "queue" (default) or "drop".
 # "queue": New messages will wait if the extension is busy.
 # "drop": New messages will be rejected if the extension is busy.
-MESSAGE_SEND_STRATEGY=drop
+MESSAGE_SEND_STRATEGY=queue
 # REQUEST_TIMEOUT_MS: The timeout for requests sent to the browser extension, in milliseconds.
 # Default: 300000 (5 minutes)
 REQUEST_TIMEOUT_MS=300000
+AUTO_KILL_PORT=true

@@ -17,13 +17,14 @@ console.log("SERVER.TS: Top of file reached - src/server.ts is being executed.")
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see https://www.gnu.org/licenses/.
  */
-import express, { Request, Response, NextFunction, Router } from 'express';
 import bodyParser from 'body-parser';
+import { execSync } from 'child_process'; // Import for executing commands
 import cors from 'cors';
-import { WebSocketServer, WebSocket } from 'ws';
+import express, { NextFunction, Request, Response, Router } from 'express';
+import fs from 'fs';
 import http from 'http';
 import path from 'path';
-import fs from 'fs';
+import { WebSocket, WebSocketServer } from 'ws';
 import os from 'os';
 
 // Load .env file variables into process.env
@@ -56,7 +57,54 @@ let serverPortForListen: number = process.env.PORT && !isNaN(parseInt(process.en
   ? parseInt(process.env.PORT, 10)
   : 3003;
 
-console.log(`SERVER.TS: Initial effective settings - Strategy: ${newRequestBehavior}, Timeout: ${currentRequestTimeoutMs}ms, Port: ${serverPortForListen}`);
+let autoKillPort: boolean = process.env.AUTO_KILL_PORT === 'true' || false;
+
+// Simple log collection system
+interface LogEntry {
+  timestamp: string;
+  level: 'info' | 'warn' | 'error';
+  message: string;
+}
+
+const logHistory: LogEntry[] = [];
+const MAX_LOGS = 100;
+
+// Override console methods to capture logs
+const originalConsoleLog = console.log;
+const originalConsoleWarn = console.warn;
+const originalConsoleError = console.error;
+
+function addLogEntry(level: 'info' | 'warn' | 'error', message: string) {
+  const entry: LogEntry = {
+    timestamp: new Date().toISOString(),
+    level,
+    message
+  };
+  logHistory.push(entry);
+  if (logHistory.length > MAX_LOGS) {
+    logHistory.shift(); // Remove oldest entry
+  }
+}
+
+console.log = (...args: any[]) => {
+  const message = args.join(' ');
+  addLogEntry('info', message);
+  originalConsoleLog(...args);
+};
+
+console.warn = (...args: any[]) => {
+  const message = args.join(' ');
+  addLogEntry('warn', message);
+  originalConsoleWarn(...args);
+};
+
+console.error = (...args: any[]) => {
+  const message = args.join(' ');
+  addLogEntry('error', message);
+  originalConsoleError(...args);
+};
+
+console.log(`SERVER.TS: Initial effective settings - Strategy: ${newRequestBehavior}, Timeout: ${currentRequestTimeoutMs}ms, Port: ${serverPortForListen}, AutoKillPort: ${autoKillPort}`);
 
 // Interfaces
 interface PendingRequest {
@@ -185,6 +233,9 @@ if (!process.env.REQUEST_TIMEOUT_MS || isNaN(parseInt(process.env.REQUEST_TIMEOU
 if (!process.env.PORT || isNaN(parseInt(process.env.PORT, 10)) || parseInt(process.env.PORT, 10) <= 0) {
     initialEnvSettingsToEnsure.PORT = serverPortForListen;
 }
+if (process.env.AUTO_KILL_PORT === undefined) {
+    initialEnvSettingsToEnsure.AUTO_KILL_PORT = autoKillPort.toString();
+}
 if (Object.keys(initialEnvSettingsToEnsure).length > 0) {
     console.log("SERVER.TS: Initializing/updating .env file with current/default settings:", initialEnvSettingsToEnsure);
     updateEnvFile(initialEnvSettingsToEnsure);
@@ -210,21 +261,23 @@ interface AdminSettingsPayload {
   messageSendStrategy?: 'queue' | 'drop';
   requestTimeout?: number | string; // Allow string from form, parse to number
   serverPort?: number | string;   // Allow string from form, parse to number
+  autoKillPort?: boolean;
 }
 
 // --- Admin API Routes (using .env) ---
 app.get('/admin/settings', (req: Request, res: Response) => {
-  console.log(`SERVER.TS: Handling GET /admin/settings. Current settings: Strategy=${newRequestBehavior}, Timeout=${currentRequestTimeoutMs}, Port=${serverPortForListen}`);
+  console.log(`SERVER.TS: Handling GET /admin/settings. Current settings: Strategy=${newRequestBehavior}, Timeout=${currentRequestTimeoutMs}, Port=${serverPortForListen}, AutoKillPort=${autoKillPort}`);
   res.status(200).json({
     messageSendStrategy: newRequestBehavior,
     requestTimeout: currentRequestTimeoutMs,
-    serverPort: serverPortForListen
+    serverPort: serverPortForListen,
+    autoKillPort: autoKillPort
   });
 });
 console.log("SERVER.TS: DEFINED ROUTE: GET /admin/settings");
 
 app.post('/admin/settings', (req: Request<{}, any, AdminSettingsPayload>, res: Response) => {
-  const { messageSendStrategy, requestTimeout, serverPort } = req.body;
+  const { messageSendStrategy, requestTimeout, serverPort, autoKillPort: newAutoKillPort } = req.body;
   let changesMade = false;
   let errors: string[] = [];
   const settingsToSaveToEnv: Record<string, string | number> = {};
@@ -267,6 +320,18 @@ app.post('/admin/settings', (req: Request<{}, any, AdminSettingsPayload>, res: R
     }
   }
 
+  if (newAutoKillPort !== undefined) {
+    if (typeof newAutoKillPort === 'boolean') {
+      autoKillPort = newAutoKillPort;
+      settingsToSaveToEnv.AUTO_KILL_PORT = autoKillPort.toString();
+      console.log(`SERVER.TS: Handling POST /admin/settings - AutoKillPort updated to: ${autoKillPort}`);
+      changesMade = true;
+    } else {
+      errors.push('Invalid autoKillPort. Must be a boolean.');
+      console.warn(`SERVER.TS: Handling POST /admin/settings - Invalid autoKillPort: ${newAutoKillPort}`);
+    }
+  }
+
   if (errors.length > 0) {
     res.status(400).json({ error: errors.join('; ') });
     return;
@@ -276,24 +341,34 @@ app.post('/admin/settings', (req: Request<{}, any, AdminSettingsPayload>, res: R
     updateEnvFile(settingsToSaveToEnv);
     res.status(200).json({
       message: 'Settings updated. .env file modified, server may restart.',
-      currentSettings: { 
-        messageSendStrategy: newRequestBehavior, 
-        requestTimeout: currentRequestTimeoutMs, 
-        serverPort: serverPortForListen 
+      currentSettings: {
+        messageSendStrategy: newRequestBehavior,
+        requestTimeout: currentRequestTimeoutMs,
+        serverPort: serverPortForListen,
+        autoKillPort: autoKillPort
       }
     });
   } else {
     res.status(200).json({
       message: 'No valid settings were changed.',
-      currentSettings: { 
-        messageSendStrategy: newRequestBehavior, 
-        requestTimeout: currentRequestTimeoutMs, 
-        serverPort: serverPortForListen 
+      currentSettings: {
+        messageSendStrategy: newRequestBehavior,
+        requestTimeout: currentRequestTimeoutMs,
+        serverPort: serverPortForListen,
+        autoKillPort: autoKillPort
       }
     });
   }
 });
 console.log("SERVER.TS: DEFINED ROUTE: POST /admin/settings");
+
+// Logs endpoint
+app.get('/admin/logs', (req: Request, res: Response) => {
+  console.log(`SERVER.TS: Handling GET /admin/logs. Returning ${logHistory.length} log entries.`);
+  res.status(200).json(logHistory);
+});
+console.log("SERVER.TS: DEFINED ROUTE: GET /admin/logs");
+
 // --- End Admin API Routes ---
 
 // Admin UI: Serve static files
@@ -608,10 +683,75 @@ app.get('/health', (req: Request, res: Response) => {
    });
 });
 
-server.listen(serverPortForListen, () => {
-  console.log(`SERVER.TS: OpenAI-compatible relay server started and listening on port ${serverPortForListen}`);
-  console.log(`SERVER.TS: WebSocket server for browser extensions running on ws://localhost:${serverPortForListen}`);
-  console.log(`SERVER.TS: Admin UI should be available at http://localhost:${serverPortForListen}/admin/admin.html`);
+// Function to handle port conflicts by killing processes using the port
+function handlePortConflict(portToFree: number, autoKillEnabled: boolean) {
+  if (!autoKillEnabled) {
+    console.log(`Auto-kill is disabled. Skipping port conflict check for port ${portToFree}.`);
+    return;
+  }
+
+  console.log(`Checking if port ${portToFree} is in use...`);
+  try {
+    // Command to find process using the port (Windows specific)
+    const command = `netstat -ano -p TCP | findstr ":${portToFree}.*LISTENING"`;
+    const output = execSync(command, { encoding: 'utf-8' });
+
+    if (output) {
+      console.log(`Port ${portToFree} is in use. Output:\n${output}`);
+      // Extract PID - Example: TCP    0.0.0.0:3003           0.0.0.0:0              LISTENING       12345
+      // PID is the last number on the line.
+      const lines = output.trim().split('\n');
+      if (lines.length > 0) {
+        const firstLine = lines[0];
+        const parts = firstLine.trim().split(/\s+/);
+        const pid = parts[parts.length - 1];
+
+        if (pid && !isNaN(parseInt(pid))) {
+          console.log(`Attempting to kill process with PID: ${pid} using port ${portToFree}`);
+          try {
+            execSync(`taskkill /PID ${pid} /F`);
+            console.log(`Successfully killed process ${pid} using port ${portToFree}.`);
+            logAdminMessage('PORT_KILLED', `PORT_${portToFree}`, { port: portToFree, pid: pid, status: 'success' })
+              .catch(err => console.error("ADMIN_LOG_ERROR (PORT_KILLED):", err));
+          } catch (killError) {
+            console.error(`Failed to kill process ${pid} using port ${portToFree}:`, killError);
+            logAdminMessage('PORT_KILL_FAILED', `PORT_${portToFree}`, { port: portToFree, pid: pid, status: 'failure', error: (killError as Error).message })
+              .catch(err => console.error("ADMIN_LOG_ERROR (PORT_KILL_FAILED):", err));
+          }
+        } else {
+          console.warn(`Could not extract a valid PID for port ${portToFree} from netstat output: ${firstLine}`);
+        }
+      } else {
+        console.log(`No process found listening on port ${portToFree} from netstat output.`);
+      }
+    } else {
+      console.log(`Port ${portToFree} is free.`);
+    }
+  } catch (error: any) {
+    // If findstr returns an error, it usually means the port is not found / not in use.
+    if (error.status === 1) { // findstr exits with 1 if string not found
+      console.log(`Port ${portToFree} appears to be free (netstat/findstr did not find it).`);
+    } else {
+      console.error(`Error checking port ${portToFree}:`, error.message);
+    }
+  }
+}
+
+// Start the server
+async function startServer() {
+  // Handle potential port conflict before starting the server
+  handlePortConflict(serverPortForListen, autoKillPort);
+
+  server.listen(serverPortForListen, () => {
+    console.log(`SERVER.TS: OpenAI-compatible relay server started and listening on port ${serverPortForListen}`);
+    console.log(`SERVER.TS: WebSocket server for browser extensions running on ws://localhost:${serverPortForListen}`);
+    console.log(`SERVER.TS: Admin UI should be available at http://localhost:${serverPortForListen}/admin/admin.html`);
+  });
+}
+
+startServer().catch(err => {
+  console.error("Failed to start server:", err);
+  process.exit(1);
 });
 
 export default server;
