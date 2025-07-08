@@ -611,7 +611,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                   }
               } else { // No error from content.js, proceed to send data
                   try {
-                      const responseText = message.text || "";
+                      let responseText = message.text || "";
+                      
+                      // Decode text if it was encoded by content script
+                      if (message.encoded) {
+                          responseText = decodeURIComponent(responseText);
+                      }
+                      
                       console.log(BG_LOG_PREFIX, `Attempting to send FINAL CHAT_RESPONSE_CHUNK for requestId ${message.requestId}. Data length: ${responseText.length}`);
                       relaySocket.send(JSON.stringify({
                           type: "CHAT_RESPONSE_CHUNK",
