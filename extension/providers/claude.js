@@ -294,18 +294,28 @@ class ClaudeProvider {
     }
   }
 
-  handleDebuggerData(requestId, rawData, isFinalFromBackground) {
+  handleDebuggerData(requestId, rawData, isFinalFromBackground, errorFromBackground = null) {
     // !!!!! VERY IMPORTANT ENTRY LOG !!!!!
-    console.log('[[ClaudeProvider]] handleDebuggerData ENTERED. RequestId: ' + requestId + ', isFinalFromBackground: ' + isFinalFromBackground + ', RawData Length: ' + (rawData ? rawData.length : 'null'));
+    console.log('[[ClaudeProvider]] handleDebuggerData ENTERED. RequestId: ' + requestId + ', isFinalFromBackground: ' + isFinalFromBackground + ', RawData Length: ' + (rawData ? rawData.length : 'null') + ', ErrorFromBG: ' + errorFromBackground);
 
     const callback = this.pendingResponseCallbacks.get(requestId);
 
     if (!callback) {
-      console.warn('[' + this.name + '] No pending callback for requestId: ' + requestId + '. Ignoring.');
+      console.warn('[' + this.name + '] No pending callback for requestId: ' + requestId + '. Ignoring debugger data/error.');
       if (this.requestBuffers.has(requestId)) {
         this.requestBuffers.delete(requestId);
       }
       return;
+    }
+
+    if (errorFromBackground) {
+      console.warn(`[${this.name}] handleDebuggerData: Propagating error for requestId ${requestId}: ${errorFromBackground}`);
+      callback(requestId, `[Provider Error from Background] ${errorFromBackground}`, true); // Pass error as text, mark as final
+      this.pendingResponseCallbacks.delete(requestId);
+      if (this.requestBuffers.has(requestId)) {
+        this.requestBuffers.delete(requestId); // Clean up buffer too
+      }
+      return; // Stop further processing
     }
 
     if (!this.requestBuffers.has(requestId)) {
@@ -510,7 +520,7 @@ class ClaudeProvider {
     console.log(`[${this.name}] getStreamingApiPatterns called. Capture method: ${this.captureMethod}`);
     if (this.captureMethod === "debugger" && this.debuggerUrlPattern) {
       console.log(`[${this.name}] Using debugger URL pattern: ${this.debuggerUrlPattern}`);
-      return [{ urlPattern: this.debuggerUrlPattern, requestStage: "Response" }];
+      return [{ urlPattern: this.debuggerUrlPattern }];
     }
     console.log(`[${this.name}] No debugger patterns to return (captureMethod is not 'debugger' or no pattern set).`);
     return [];

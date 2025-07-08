@@ -1,127 +1,248 @@
 <!--
   Chat Relay: Relay for AI Chat Interfaces
   Copyright (C) 2025 Jamison Moore
+
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU Affero General Public License as
   published by the Free Software Foundation, either version 3 of the
   License, or (at your option) any later version.
+
   This program is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU Affero General Public License for more details.
+
   You should have received a copy of the GNU Affero General Public License
   along with this program.  If not, see https://www.gnu.org/licenses/.
 -->
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Relay Admin</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
             margin: 0;
             padding: 0;
-            background-color: #f4f4f4;
-            color: #333;
+            background-color: #f0f2f5; /* Lighter gray */
+            color: #1c1e21; /* Darker text for better contrast */
+            line-height: 1.6;
         }
-
         header {
-            background-color: #333;
+            background-color: #1877f2; /* Facebook blue */
             color: #fff;
-            padding: 1em;
+            padding: 1em 1.5em;
             text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-
+        header h1 {
+            margin: 0;
+            font-size: 1.8em;
+        }
         nav {
-            background-color: #444;
-            padding: 0.5em;
+            background-color: #fff; /* White background for nav */
+            padding: 0.75em 1.5em;
+            border-bottom: 1px solid #dddfe2; /* Light border */
+            box-shadow: 0 2px 2px -2px rgba(0,0,0,0.05);
         }
-
         nav ul {
             list-style-type: none;
             padding: 0;
             margin: 0;
             text-align: center;
         }
-
         nav ul li {
             display: inline;
-            margin-right: 20px;
+            margin-right: 25px;
         }
-
         nav ul li a {
-            color: #fff;
+            color: #1877f2; /* Blue links */
             text-decoration: none;
-            font-weight: bold;
+            font-weight: 600; /* Slightly bolder */
+            padding: 0.5em 0;
+            transition: color 0.2s ease;
         }
-
+        nav ul li a:hover {
+            color: #1159bd; /* Darker blue on hover */
+        }
         nav ul li a.active {
-            text-decoration: underline;
+            color: #1c1e21; /* Darker color for active tab */
+            border-bottom: 3px solid #1877f2;
         }
-
         .container {
-            padding: 1em;
+            padding: 1.5em;
+            max-width: 100%;
+            box-sizing: border-box;
         }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
         h2 {
-            border-bottom: 2px solid #333;
+            border-bottom: 2px solid #dddfe2;
             padding-bottom: 0.5em;
+            color: #1c1e21;
+            font-size: 1.5em;
+            margin-top: 0;
         }
-
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 1em;
+            margin-top: 1.5em;
+            table-layout: fixed; /* Important for controlling column widths */
+            background-color: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border-radius: 6px;
+            overflow: hidden; /* Ensures border-radius is respected by children */
         }
-
-        th,
-        td {
-            border: 1px solid #ddd;
-            padding: 8px;
+        th, td {
+            border: 1px solid #dddfe2;
+            padding: 12px 10px; /* Increased padding */
             text-align: left;
+            vertical-align: top; /* Align content to the top */
+            word-wrap: break-word; /* Prevent long words from breaking layout */
         }
-
         th {
-            background-color: #555;
-            color: white;
+            background-color: #f5f6f7; /* Lighter header background */
+            color: #4b4f56; /* Darker gray for header text */
+            font-weight: 600;
+            position: relative; /* For positioning collapse buttons */
+        }
+        /* Column width styling */
+        th.col-timestamp, td.col-timestamp { width: 12%; } /* Start/End Timestamp */
+        th.col-request-id, td.col-request-id { width: 8%; }  /* Request ID */
+        th.col-status, td.col-status { width: 8%; }        /* Status */
+        /* The remaining 4 data columns will share the rest of the space.
+           (100 - 12 - 12 - 8 - 8) = 60%. So each gets 15% */
+        th.col-data, td.col-data { width: 15%; }
+
+        td pre { /* Style for the <pre> tags inside cells */
+            margin: 0;
+            white-space: pre-wrap;
+            max-height: 200px; /* Keep existing max-height */
+            overflow-y: auto;
+            background-color: #f9f9f9; /* Slight background for pre blocks */
+            padding: 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #333;
         }
 
         .log-window {
-            background-color: #222;
-            color: #0f0;
-            font-family: 'Courier New', Courier, monospace;
-            padding: 10px;
-            height: 200px;
+            background-color: #1e1e1e; /* Darker background for log */
+            color: #d4d4d4; /* Lighter text for log */
+            font-family: 'Consolas', 'Courier New', Courier, monospace;
+            padding: 15px;
+            height: 250px; /* Slightly taller */
             overflow-y: scroll;
-            border: 1px solid #444;
-            margin-top: 1em;
+            border: 1px solid #333;
+            margin-top: 1.5em;
+            border-radius: 4px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
         }
-
         .log-entry {
             white-space: pre-wrap;
+            padding: 2px 0;
         }
-
         .collapsible-header {
-            background-color: #555;
+            background-color: #6c757d; /* Bootstrap secondary color */
             color: white;
-            padding: 0.5em;
+            padding: 0.75em;
             cursor: pointer;
             text-align: center;
+            border-radius: 4px;
+            margin-top: 1em;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
+        }
+        .collapsible-header:hover {
+            background-color: #5a6268;
+        }
+        button {
+            padding: 8px 15px;
+            font-size: 0.9em;
+            border-radius: 4px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        #refresh-messages-btn {
+            background-color: #007bff; /* Primary blue */
+            color: white;
+            margin-left: 10px;
+        }
+        #refresh-messages-btn:hover {
+            background-color: #0056b3;
+        }
+        #save-settings-btn {
+            background-color: #28a745; /* Green for save */
+            color: white;
+        }
+        #save-settings-btn:hover {
+            background-color: #1e7e34;
+        }
+        #restart-server-btn {
+            background-color: #dc3545; /* Red for restart/danger */
+            color: white;
+        }
+        #restart-server-btn:hover {
+            background-color: #c82333;
+        }
+        input[type="text"], input[type="number"], select {
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        label {
+            font-weight: 500;
+            margin-right: 5px;
+        }
+        .settings-item, .status-item {
+            margin-bottom: 1em;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #dddfe2;
+            border-radius: 4px;
+        }
+        #update-status-msg {
+            margin-left: 10px;
+            font-style: italic;
+        }
+        .collapse-btn {
+            font-size: 0.7em;
+            padding: 2px 5px;
+            margin-left: 5px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            background-color: #f0f0f0;
+            border-radius: 3px;
+            display: inline-block; /* To sit next to header text */
+            vertical-align: middle;
+        }
+        .collapse-btn:hover {
+            background-color: #e0e0e0;
+        }
+        .collapsed-cell {
+            /* Could add specific styling for collapsed cells if needed, e.g., a placeholder */
+            /* For now, they will just be hidden by JavaScript */
+        }
+        .header-collapsed {
+            width: 1px !important; /* Minimal width to keep column in layout but visually gone */
+            min-width: 1px !important; /* Ensure it doesn't expand due to content */
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            border-left-width: 0 !important;
+            border-right-width: 0 !important;
+            overflow: hidden !important; /* Hide content that might overflow 1px */
+            color: transparent !important; /* Hide text by making it transparent */
+            font-size: 0 !important; /* Another way to hide text, affects children */
+        }
+        .header-collapsed .collapse-btn { /* Ensure button is also hidden if not already by font-size:0 */
+            display: none !important;
         }
     </style>
 </head>
-
 <body>
     <header>
         <h1>Chat Relay Admin Dashboard</h1>
@@ -130,24 +251,30 @@
         <ul>
             <li><a href="#" class="tab-link active" data-tab="messages">Messages</a></li>
             <li><a href="#" class="tab-link" data-tab="settings">Settings</a></li>
-            <li><a href="#" class="tab-link" data-tab="status">Status</a></li>
         </ul>
     </nav>
     <div class="container">
         <div id="messages" class="tab-content active">
-            <h2>Message History <button id="refresh-messages-btn" style="font-size: 0.8em; margin-left: 10px;">Refresh
-                    Messages</button></h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1em;">
+                <h2>Message History</h2>
+                <div style="display: flex; align-items: center;">
+                    <span style="margin-right: 15px;">Server Uptime: <span id="status-uptime">N/A</span></span>
+                    <span style="margin-right: 15px;">Connected Extensions: <span id="status-connected-extensions">0</span></span>
+                    <button id="refresh-messages-btn" style="font-size: 0.8em; padding: 0.5em 1em; margin-right: 10px;">Refresh Messages</button>
+                    <button id="restart-server-btn" style="font-size: 0.8em; padding: 0.5em 1em; background-color: #d9534f; color: white; border: none; cursor: pointer;">Restart Server</button>
+                </div>
+            </div>
             <table>
                 <thead>
                     <tr>
-                        <th>Start Timestamp</th>
-                        <th>End Timestamp</th>
-                        <th>Request ID</th>
-                        <th>From Client (Cline)</th>
-                        <th>To Extension</th>
-                        <th>From Extension</th>
-                        <th>To Client (Cline)</th>
-                        <th>Status</th>
+                        <th class="col-timestamp">Start Timestamp</th>
+                        <th class="col-timestamp">End Timestamp</th>
+                        <th class="col-request-id">Request ID</th>
+                        <th class="col-data">From Client <span class="collapse-btn" data-column="fromClient" title="Toggle Column">-</span></th>
+                        <th class="col-data">To Extension <span class="collapse-btn" data-column="toExtension" title="Toggle Column">-</span></th>
+                        <th class="col-data">From Extension <span class="collapse-btn" data-column="fromExtension" title="Toggle Column">-</span></th>
+                        <th class="col-data">To Client <span class="collapse-btn" data-column="toClient" title="Toggle Column">-</span></th>
+                        <th class="col-status">Status</th>
                     </tr>
                 </thead>
                 <tbody id="message-history-body">
@@ -170,8 +297,7 @@
                 <div style="margin-top: 0.5em;">
                     <label>New Request Behavior (if extension busy):</label>
                     <div>
-                        <input type="radio" id="newRequestBehaviorQueue" name="newRequestBehavior" value="queue"
-                            checked>
+                        <input type="radio" id="newRequestBehaviorQueue" name="newRequestBehavior" value="queue" checked>
                         <label for="newRequestBehaviorQueue">Queue</label>
                     </div>
                     <div>
@@ -179,25 +305,12 @@
                         <label for="newRequestBehaviorDrop">Drop</label>
                     </div>
                 </div>
-                <div style="margin-top: 0.5em;">
-                    <label for="auto-kill-port-input">Auto-kill conflicting port 3003 process on startup: </label>
-                    <input type="checkbox" id="auto-kill-port-input">
-                </div>
                 <button id="save-settings-btn" style="margin-top: 1em; margin-bottom: 0.5em;">Save Settings</button>
                 <span id="update-status-msg" style="margin-left: 10px; font-style: italic;"></span>
                 <p style="margin-top: 1em;">Ping Interval (ms): <span id="setting-ping-interval"></span></p>
             </div>
         </div>
-        <div id="status" class="tab-content">
-            <h2>Server Status</h2>
-            <div id="status-content">
-                <p>Server Uptime: <span id="status-uptime">N/A</span></p>
-                <p>Connected Extensions: <span id="status-connected-extensions">0</span></p>
-                <button id="restart-server-btn"
-                    style="margin-top: 1em; padding: 0.5em 1em; background-color: #d9534f; color: white; border: none; cursor: pointer;">Restart
-                    Server</button>
-            </div>
-        </div>
+        <!-- Status tab content removed as its elements are moved to the Messages tab -->
     </div>
     <div class="collapsible-header" onclick="toggleLogWindow()">Server Logs (click to toggle)</div>
     <div class="log-window" id="log-window-content" style="display: none;">
@@ -215,8 +328,13 @@
                 link.classList.add('active');
                 const activeTabContent = document.getElementById(link.dataset.tab);
                 activeTabContent.classList.add('active');
-                // If settings or status tab is activated, refresh their content
-                if (link.dataset.tab === 'settings' || link.dataset.tab === 'status') {
+
+                // If settings tab is activated, refresh its content
+                if (link.dataset.tab === 'settings') {
+                    fetchAndDisplayServerInfo(); // This function now also updates status on the messages tab
+                }
+                 // Always ensure server info (which includes status) is fresh when messages tab is active
+                if (link.dataset.tab === 'messages') {
                     fetchAndDisplayServerInfo();
                 }
             });
@@ -231,21 +349,23 @@
         }
         const messageHistoryBody = document.getElementById('message-history-body');
         const refreshButton = document.getElementById('refresh-messages-btn');
+
         function createPreCell(data) {
             const cell = document.createElement('td');
             if (data === undefined || data === null) {
                 cell.textContent = 'N/A';
             } else {
                 const pre = document.createElement('pre');
-                pre.style.margin = '0';
-                pre.style.whiteSpace = 'pre-wrap';
-                pre.style.maxHeight = '200px'; // Added max height
-                pre.style.overflowY = 'auto';  // Added scrollability
+                // pre.style.margin = '0'; // Handled by td pre CSS
+                // pre.style.whiteSpace = 'pre-wrap'; // Handled by td pre CSS
+                // pre.style.maxHeight = '200px'; // Handled by td pre CSS
+                // pre.style.overflowY = 'auto';  // Handled by td pre CSS
                 pre.textContent = JSON.stringify(data, null, 2);
                 cell.appendChild(pre);
             }
             return cell;
         }
+
         async function fetchAndDisplayMessageHistory() {
             try {
                 const response = await fetch('/v1/admin/message-history');
@@ -253,7 +373,9 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const messages = await response.json();
+
                 messageHistoryBody.innerHTML = ''; // Clear existing rows
+
                 if (messages.length === 0) {
                     const row = messageHistoryBody.insertRow();
                     const cell = row.insertCell();
@@ -262,6 +384,7 @@
                     cell.style.textAlign = 'center';
                     return;
                 }
+
                 // Group messages by requestId
                 const groupedMessages = messages.reduce((acc, logEntry) => {
                     const id = logEntry.requestId;
@@ -277,6 +400,7 @@
                             status: "Unknown"
                         };
                     }
+
                     // Update fields based on log type
                     switch (logEntry.type) {
                         case 'CHAT_REQUEST_RECEIVED':
@@ -304,29 +428,35 @@
                     }
                     return acc;
                 }, {});
+
                 // Convert grouped messages object to an array and sort by timestamp (most recent first)
                 const consolidatedMessages = Object.values(groupedMessages).sort((a, b) => {
                     // Sort by startTimestamp, most recent first
                     return new Date(b.startTimestamp) - new Date(a.startTimestamp);
                 });
+
                 if (consolidatedMessages.length === 0) {
-                    const row = messageHistoryBody.insertRow();
+                     const row = messageHistoryBody.insertRow();
                     const cell = row.insertCell();
                     cell.colSpan = 8; // Adjusted for new column
                     cell.textContent = 'No consolidated message history to display.';
                     cell.style.textAlign = 'center';
                     return;
                 }
+
                 consolidatedMessages.forEach(msg => {
                     const row = messageHistoryBody.insertRow();
-                    row.insertCell().textContent = new Date(msg.startTimestamp).toLocaleString();
-                    row.insertCell().textContent = msg.endTimestamp ? new Date(msg.endTimestamp).toLocaleString() : (msg.status === "Request In Progress" ? "In Progress" : "N/A");
-                    row.insertCell().textContent = msg.requestId;
-                    row.appendChild(createPreCell(msg.fromClient));
-                    row.appendChild(createPreCell(msg.toExtension));
-                    row.appendChild(createPreCell(msg.fromExtension));
-                    row.appendChild(createPreCell(msg.toClient));
-                    row.insertCell().textContent = msg.status;
+                    let cell;
+                    cell = row.insertCell(); cell.textContent = new Date(msg.startTimestamp).toLocaleString(); cell.classList.add('col-timestamp');
+                    cell = row.insertCell(); cell.textContent = msg.endTimestamp ? new Date(msg.endTimestamp).toLocaleString() : (msg.status === "Request In Progress" ? "In Progress" : "N/A"); cell.classList.add('col-timestamp');
+                    cell = row.insertCell(); cell.textContent = msg.requestId; cell.classList.add('col-request-id');
+                    
+                    cell = createPreCell(msg.fromClient); cell.classList.add('col-data', 'cell-fromClient'); row.appendChild(cell);
+                    cell = createPreCell(msg.toExtension); cell.classList.add('col-data', 'cell-toExtension'); row.appendChild(cell);
+                    cell = createPreCell(msg.fromExtension); cell.classList.add('col-data', 'cell-fromExtension'); row.appendChild(cell);
+                    cell = createPreCell(msg.toClient); cell.classList.add('col-data', 'cell-toClient'); row.appendChild(cell);
+                    
+                    cell = row.insertCell(); cell.textContent = msg.status; cell.classList.add('col-status');
                 });
             } catch (error) {
                 console.error('Error fetching message history:', error);
@@ -339,16 +469,19 @@
                 cell.style.textAlign = 'center';
             }
         }
+
         if (refreshButton) {
             refreshButton.addEventListener('click', fetchAndDisplayMessageHistory);
         }
+
         fetchAndDisplayMessageHistory(); // Initial load for messages
+        fetchAndDisplayServerInfo(); // Initial load for server info (status) on the messages tab
+
         // Elements for settings and status
         const portInputEl = document.getElementById('port-input'); // Corrected ID
         const requestTimeoutInputEl = document.getElementById('request-timeout-input');
         const newRequestBehaviorQueueEl = document.getElementById('newRequestBehaviorQueue');
         const newRequestBehaviorDropEl = document.getElementById('newRequestBehaviorDrop');
-        const autoKillPortInputEl = document.getElementById('auto-kill-port-input');
         const saveSettingsBtn = document.getElementById('save-settings-btn');
         const updateStatusMsgEl = document.getElementById('update-status-msg');
         const settingPingIntervalEl = document.getElementById('setting-ping-interval');
@@ -356,6 +489,7 @@
         const statusUptimeEl = document.getElementById('status-uptime');
         const statusConnectedExtensionsEl = document.getElementById('status-connected-extensions');
         const restartServerBtn = document.getElementById('restart-server-btn');
+
         function formatUptime(totalSeconds) {
             if (totalSeconds === null || totalSeconds === undefined) return 'N/A';
             const days = Math.floor(totalSeconds / (3600 * 24));
@@ -364,6 +498,7 @@
             totalSeconds %= 3600;
             const minutes = Math.floor(totalSeconds / 60);
             const seconds = totalSeconds % 60;
+
             let uptimeString = '';
             if (days > 0) uptimeString += `${days}d `;
             if (hours > 0) uptimeString += `${hours}h `;
@@ -371,83 +506,123 @@
             uptimeString += `${seconds}s`;
             return uptimeString.trim() || '0s';
         }
+
         async function fetchAndDisplayServerInfo() {
             try {
-                const response = await fetch('/v1/admin/server-info');
+                // UPDATED: Fetch from the new consolidated settings endpoint
+                const response = await fetch('/admin/settings');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                const serverInfo = await response.json();
-                // Populate Settings
-                if (portInputEl) portInputEl.value = serverInfo.port || ''; // Use portInputEl
-                if (requestTimeoutInputEl) requestTimeoutInputEl.value = serverInfo.requestTimeoutMs !== null ? serverInfo.requestTimeoutMs : '';
-                if (settingPingIntervalEl) settingPingIntervalEl.textContent = serverInfo.pingIntervalMs !== null ? `${serverInfo.pingIntervalMs} ms` : 'N/A (Not Implemented)';
-                if (serverInfo.newRequestBehavior === 'drop') {
-                    if (newRequestBehaviorDropEl) newRequestBehaviorDropEl.checked = true;
+                const currentSettings = await response.json();
+
+                // Populate Settings using the new response structure
+                if(portInputEl) portInputEl.value = currentSettings.serverPort || '';
+                if(requestTimeoutInputEl) requestTimeoutInputEl.value = currentSettings.requestTimeout !== null ? currentSettings.requestTimeout : '';
+                // Ping interval is not part of /admin/settings, assuming it's static or handled elsewhere if needed
+                // if(settingPingIntervalEl) settingPingIntervalEl.textContent = currentSettings.pingIntervalMs !== null ? `${currentSettings.pingIntervalMs} ms` : 'N/A (Not Implemented)';
+                
+                if (currentSettings.messageSendStrategy === 'drop') {
+                    if(newRequestBehaviorDropEl) newRequestBehaviorDropEl.checked = true;
                 } else {
-                    if (newRequestBehaviorQueueEl) newRequestBehaviorQueueEl.checked = true; // Default to queue
+                    if(newRequestBehaviorQueueEl) newRequestBehaviorQueueEl.checked = true; // Default to queue
                 }
-                if (autoKillPortInputEl) autoKillPortInputEl.checked = serverInfo.autoKillPort || false;
-                // Populate Status
-                if (statusUptimeEl) statusUptimeEl.textContent = formatUptime(serverInfo.uptimeSeconds);
-                if (statusConnectedExtensionsEl) statusConnectedExtensionsEl.textContent = serverInfo.connectedExtensionsCount !== null ? serverInfo.connectedExtensionsCount : 'N/A';
-            } catch (error) {
-                console.error('Error fetching server info:', error);
-                if (portInputEl) portInputEl.value = 'Error';
-                if (requestTimeoutInputEl) requestTimeoutInputEl.value = 'Error';
-                if (settingPingIntervalEl) settingPingIntervalEl.textContent = 'Error';
-                if (newRequestBehaviorQueueEl) newRequestBehaviorQueueEl.checked = true; // Default on error
-                if (autoKillPortInputEl) autoKillPortInputEl.checked = false; // Default on error
-                // Ensure error handling for status elements
-                if (statusUptimeEl) statusUptimeEl.textContent = 'Error loading uptime';
-                if (statusConnectedExtensionsEl) statusConnectedExtensionsEl.textContent = 'Error loading connections';
+
+                // Populate Status - Assuming server-info might still be used for uptime/connections or these are separate
+                // For now, focusing on settings. If status also needs to come from /admin/settings, that's another change.
+                // Let's assume uptime and connectedExtensionsCount are fetched separately or are less critical for this immediate fix.
+                // For simplicity, I'll comment out the status population from this specific fetch if it was tied to the old server-info structure.
+                // If your /admin/settings also returns uptime and connectedExtensionsCount, uncomment and adjust field names.
+                /*
+                if(statusUptimeEl) statusUptimeEl.textContent = formatUptime(currentSettings.uptimeSeconds);
+                if(statusConnectedExtensionsEl) statusConnectedExtensionsEl.textContent = currentSettings.connectedExtensionsCount !== null ? currentSettings.connectedExtensionsCount : 'N/A';
+                */
+                // If you still have a /v1/admin/server-info for uptime and connections, that part can remain as is.
+                // This function will now primarily handle settings population.
+                // To keep status functional if it's from a different endpoint, we might need to separate concerns
+                // or ensure /admin/settings returns everything. For now, focusing on fixing settings load.
+
+                // Fetch separate status info if needed (example if /v1/admin/server-info is still used for status)
+                const statusResponse = await fetch('/v1/admin/server-info');
+                if (statusResponse.ok) {
+                    const serverInfoForStatus = await statusResponse.json();
+                    if(statusUptimeEl) statusUptimeEl.textContent = formatUptime(serverInfoForStatus.uptimeSeconds);
+                    if(statusConnectedExtensionsEl) statusConnectedExtensionsEl.textContent = serverInfoForStatus.connectedExtensionsCount !== null ? serverInfoForStatus.connectedExtensionsCount : 'N/A';
+                    if(settingPingIntervalEl && serverInfoForStatus.pingIntervalMs !== undefined) settingPingIntervalEl.textContent = serverInfoForStatus.pingIntervalMs !== null ? `${serverInfoForStatus.pingIntervalMs} ms` : 'N/A (Not Implemented)';
+                } else {
+                    // Handle case where statusResponse itself is not ok
+                    console.warn(`Failed to fetch status from /v1/admin/server-info: ${statusResponse.status}`);
+                    if(statusUptimeEl) statusUptimeEl.textContent = 'Status N/A';
+                    if(statusConnectedExtensionsEl) statusConnectedExtensionsEl.textContent = 'Status N/A';
+                    if(settingPingIntervalEl) settingPingIntervalEl.textContent = 'Status N/A';
+                }
+            } catch (error) { // This is the single catch block for the try starting at line 310
+                console.error('Error in fetchAndDisplayServerInfo:', error);
+                // Set all relevant fields to an error state
+                if(portInputEl) portInputEl.value = 'Error';
+                if(requestTimeoutInputEl) requestTimeoutInputEl.value = 'Error';
+                if(settingPingIntervalEl) settingPingIntervalEl.textContent = 'Error';
+                if(newRequestBehaviorQueueEl) newRequestBehaviorQueueEl.checked = true; // Default on error
+                if(statusUptimeEl) statusUptimeEl.textContent = 'Error loading';
+                if(statusConnectedExtensionsEl) statusConnectedExtensionsEl.textContent = 'Error loading';
             }
         }
+        
         async function handleSaveSettings() {
-            if (!requestTimeoutInputEl || !portInputEl || !updateStatusMsgEl || !newRequestBehaviorQueueEl || !newRequestBehaviorDropEl || !autoKillPortInputEl) return;
+            if (!requestTimeoutInputEl || !portInputEl || !updateStatusMsgEl || !newRequestBehaviorQueueEl || !newRequestBehaviorDropEl) return;
+
             const newTimeout = parseInt(requestTimeoutInputEl.value, 10);
             const newPort = parseInt(portInputEl.value, 10);
             const selectedNewRequestBehavior = newRequestBehaviorQueueEl.checked ? 'queue' : 'drop';
-            const autoKillPort = autoKillPortInputEl.checked;
             let settingsToUpdate = {};
             let validationError = false;
             let messages = [];
+
             if (requestTimeoutInputEl.value.trim() !== '') { // Only process if there's input
                 if (!isNaN(newTimeout) && newTimeout > 0) {
-                    settingsToUpdate.requestTimeoutMs = newTimeout;
+                    // UPDATED: Key name for server
+                    settingsToUpdate.requestTimeout = newTimeout;
                 } else {
                     messages.push('Invalid timeout: Must be a positive number.');
                     validationError = true;
                 }
             }
+
             if (portInputEl.value.trim() !== '') { // Only process if there's input
-                if (!isNaN(newPort) && newPort > 0 && newPort <= 65535) {
-                    settingsToUpdate.port = newPort;
+                 if (!isNaN(newPort) && newPort > 0 && newPort <= 65535) {
+                    // UPDATED: Key name for server
+                    settingsToUpdate.serverPort = newPort;
                 } else {
                     messages.push('Invalid port: Must be between 1 and 65535.');
                     validationError = true;
                 }
             }
+
             // Always include newRequestBehavior as it's controlled by radio buttons
             // No specific validation needed here as it's either 'queue' or 'drop'
-            settingsToUpdate.newRequestBehavior = selectedNewRequestBehavior;
-            settingsToUpdate.autoKillPort = autoKillPort; // Add the new setting
+            // UPDATED: Key name for server
+            settingsToUpdate.messageSendStrategy = selectedNewRequestBehavior;
+            
             if (validationError) {
                 updateStatusMsgEl.textContent = messages.join(' ');
                 updateStatusMsgEl.style.color = 'red';
                 setTimeout(() => { updateStatusMsgEl.textContent = ''; }, 7000);
                 return;
             }
+
             if (Object.keys(settingsToUpdate).length === 0) {
                 updateStatusMsgEl.textContent = 'No changes to save.';
                 updateStatusMsgEl.style.color = 'blue';
                 setTimeout(() => { updateStatusMsgEl.textContent = ''; }, 5000);
                 return;
             }
+
             updateStatusMsgEl.textContent = 'Saving settings...';
             updateStatusMsgEl.style.color = 'orange';
+
             try {
-                const response = await fetch('/v1/admin/update-settings', {
+                // UPDATED: Endpoint for saving settings
+                const response = await fetch('/admin/settings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(settingsToUpdate)
@@ -471,9 +646,11 @@
             const clearTime = updateStatusMsgEl.textContent.toLowerCase().includes('restart') ? 15000 : 7000;
             setTimeout(() => { updateStatusMsgEl.textContent = ''; }, clearTime);
         }
+
         if (saveSettingsBtn) {
             saveSettingsBtn.addEventListener('click', handleSaveSettings);
         }
+        
         async function handleRestartServer() {
             if (confirm('Are you sure you want to restart the server?')) {
                 try {
@@ -486,13 +663,61 @@
                 }
             }
         }
+
         if (restartServerBtn) {
             restartServerBtn.addEventListener('click', handleRestartServer);
         }
-        // Initial load for settings and status
-        fetchAndDisplayServerInfo();
-        console.log("Admin UI initialized. Message history, settings, status, and restart functionality implemented.");
+        
+        // Initial load for settings is handled by tab click or initial messages tab load.
+        // fetchAndDisplayServerInfo(); // This is called when messages tab is active or settings tab is clicked.
+
+        // Collapsible column logic
+        const columnStates = { // To store the collapsed state
+            fromClient: false,
+            toExtension: false,
+            fromExtension: false,
+            toClient: false
+        };
+
+        function toggleColumn(columnKey) {
+            columnStates[columnKey] = !columnStates[columnKey];
+            const isCollapsed = columnStates[columnKey];
+            
+            // Update button text/indicator
+            const button = document.querySelector(`.collapse-btn[data-column="${columnKey}"]`);
+            if (button) {
+                button.textContent = isCollapsed ? '+' : '-';
+                button.title = isCollapsed ? 'Expand Column' : 'Collapse Column';
+            }
+
+            // Toggle header visibility (optional, if you want to hide header text too)
+            // const headerCell = document.querySelector(`th.col-data[data-column-key="${columnKey}"]`); // Need to add data-column-key to th if this is desired
+
+            // Toggle data cell visibility (these are the <td> elements)
+            const cellsToToggle = document.querySelectorAll(`#message-history-body td.cell-${columnKey}`);
+            cellsToToggle.forEach(cell => {
+                cell.style.display = isCollapsed ? 'none' : '';
+            });
+
+            // Special handling for the header cell (<th>) due to table-layout: fixed
+            const headerTh = document.querySelector(`th[data-column="${columnKey}"]`);
+            if (headerTh) {
+                if (isCollapsed) {
+                    headerTh.classList.add('header-collapsed');
+                } else {
+                    headerTh.classList.remove('header-collapsed');
+                }
+            }
+        }
+
+        document.querySelectorAll('.collapse-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const columnKey = this.dataset.column;
+                toggleColumn(columnKey);
+            });
+        });
+ 
+        console.log("Admin UI initialized. Message history, settings, status, restart, and collapsible columns functionality implemented.");
     </script>
 </body>
-
 </html>
