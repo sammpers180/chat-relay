@@ -611,7 +611,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                   }
               } else { // No error from content.js, proceed to send data
                   try {
-                      const responseText = message.text || "";
+                      let responseText = message.text || "";
+                      
+                      // Decode text if it was encoded by content script
+                      if (message.encoded) {
+                          responseText = decodeURIComponent(responseText);
+                      }
+                      
                       console.log(BG_LOG_PREFIX, `Attempting to send FINAL CHAT_RESPONSE_CHUNK for requestId ${message.requestId}. Data length: ${responseText.length}`);
                       relaySocket.send(JSON.stringify({
                           type: "CHAT_RESPONSE_CHUNK",
@@ -1121,13 +1127,28 @@ chrome.debugger.onEvent.addListener((debuggeeId, message, params) => {
                     }
                     console.log(BG_LOG_PREFIX, `[getResponseBody CB] errorMessageForContent AFTER check: '${errorMessageForContent}'`);
 
+                    // Text encoding fix: properly decode base64-encoded response bodies
+                    let processedData = null;
+                    if (responseBodyData && responseBodyData.body) {
+                        if (responseBodyData.base64Encoded) {
+                            try {
+                                processedData = new TextDecoder('utf-8').decode(Uint8Array.from(atob(responseBodyData.body), c => c.charCodeAt(0)));
+                            } catch (error) {
+                                console.error(BG_LOG_PREFIX, `Error decoding base64 response body for requestId ${params.requestId}:`, error);
+                                processedData = responseBodyData.body; // Fallback to original
+                            }
+                        } else {
+                            processedData = responseBodyData.body;
+                        }
+                    }
+
                     const messageToContent = {
                         type: "PROVIDER_DEBUGGER_EVENT",
                         detail: {
                             requestId: currentOperationRequestId,
                             networkRequestId: params.requestId,
-                            data: responseBodyData ? responseBodyData.body : null,
-                            base64Encoded: responseBodyData ? responseBodyData.base64Encoded : false,
+                            data: processedData,
+                            base64Encoded: false, // Always false since we've decoded it
                             error: errorMessageForContent,
                             isFinal: true 
                         }
