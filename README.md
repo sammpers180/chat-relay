@@ -65,11 +65,14 @@ graph TD
 
 The API server implements an OpenAI-compatible endpoint and manages browser extension connectivity.
 
-**Key Features:**  
-- OpenAI-style `/v1/chat/completions` endpoint  
-- WebSocket server for real-time relay  
-- Ping/pong health checks  
-- Request timeouts, retry handling  
+**Key Features:**
+- OpenAI-style `/v1/chat/completions` endpoint
+- WebSocket server for real-time relay
+- Comprehensive admin interface with real-time monitoring
+- Live server logs and message history tracking
+- Configurable settings with persistent storage
+- Ping/pong health checks
+- Request timeouts, retry handling
 - Tracks connection state
 
 ### 2. Browser Extension
@@ -203,7 +206,30 @@ Edit [`api-relay-server/src/server.js`](api-relay-server/src/server.js):
 - `PING_INTERVAL` (default: 30000ms)  
 - `CONNECTION_TIMEOUT` (default: 45000ms)
 
-API chat relay server admin panel can be found at http://localhost3003/admin for configuring these values as reviewing message flow.
+### Admin Interface
+
+The API server includes a comprehensive admin interface accessible at `http://localhost:3003/admin/admin.html` with the following features:
+
+**Settings Management:**
+- Server configuration (port, request timeout)
+- Request handling strategy (queue vs drop)
+- Auto-kill conflicting process toggle
+- Real-time settings validation and persistence
+
+**Real-Time Monitoring:**
+- Live server logs with color-coded entries (info, warn, error)
+- Message history tracking with detailed request/response data
+- Server status monitoring (uptime, connected extensions)
+- WebSocket connection status
+
+**Modern UI Features:**
+- Responsive design with professional styling
+- Real-time log updates every 2 seconds
+- Optimized layout with logs panel taking 67% of screen width
+- Interactive toggle switches and form controls
+- Chat bubble branding and modern navigation
+
+The admin interface provides both configuration management and real-time monitoring capabilities for effective server administration.
 
 ### Browser Extension
 
