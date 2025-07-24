@@ -19,10 +19,12 @@
 const DEFAULT_SETTINGS = {
   serverHost: 'localhost',
   serverPort: 3003,
-  serverProtocol: 'ws'
+  serverProtocol: 'ws',
+  chatGptCaptureMethod: 'debugger'
 };
 
 // DOM elements
+const chatGptCaptureMethodSelect = document.getElementById('chatGptCaptureMethod');
 const hostInput = document.getElementById('serverHost');
 const portInput = document.getElementById('serverPort');
 const protocolSelect = document.getElementById('serverProtocol');
@@ -35,6 +37,7 @@ function loadSettings() {
     hostInput.value = items.serverHost;
     portInput.value = items.serverPort;
     protocolSelect.value = items.serverProtocol;
+    chatGptCaptureMethodSelect.value = items.chatGptCaptureMethod;
   });
 }
 
@@ -43,7 +46,8 @@ function saveSettings() {
   const settings = {
     serverHost: hostInput.value.trim() || DEFAULT_SETTINGS.serverHost,
     serverPort: parseInt(portInput.value) || DEFAULT_SETTINGS.serverPort,
-    serverProtocol: protocolSelect.value
+    serverProtocol: protocolSelect.value,
+    chatGptCaptureMethod: chatGptCaptureMethodSelect.value
   };
   
   chrome.storage.sync.set(settings, () => {

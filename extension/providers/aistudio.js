@@ -725,13 +725,24 @@ class AIStudioProvider {
 }
 
 // Ensure the provider is available on the window for the content script
+console.log("AIStudioProvider: Attempting to register provider...");
+console.log("AIStudioProvider: window.providerUtils exists:", !!window.providerUtils);
+
 if (window.providerUtils) {
   const providerInstance = new AIStudioProvider();
+  console.log("AIStudioProvider: Created provider instance:", {
+    name: providerInstance.name,
+    supportedDomains: providerInstance.supportedDomains,
+    captureMethod: providerInstance.captureMethod
+  });
+  
   window.providerUtils.registerProvider(
     providerInstance.name,
     providerInstance.supportedDomains,
     providerInstance
   );
+  console.log("AIStudioProvider: Successfully registered provider");
 } else {
   console.error("AIStudioProvider: providerUtils not found. Registration failed.");
+  console.error("AIStudioProvider: Available window properties:", Object.keys(window));
 }

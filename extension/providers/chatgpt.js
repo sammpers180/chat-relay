@@ -20,23 +20,40 @@
 class ChatGptProvider {
   constructor() {
     // --- START OF CONFIGURABLE PROPERTIES ---
-    this.captureMethod = "debugger"; 
-    this.debuggerUrlPattern = "*chatgpt.com/backend-api/conversation*"; 
+    this.captureMethod = "debugger"; // Default value
+    this.debuggerUrlPattern = "*chatgpt.com/backend-api/conversation*";
     this.includeThinkingInMessage = true;
     // --- END OF CONFIGURABLE PROPERTIES ---
-    this.name = "ChatGptProvider"; 
-    this.supportedDomains = ["chatgpt.com"]; 
-    this.inputSelector = '#prompt-textarea'; 
+    this.name = "ChatGptProvider";
+    this.supportedDomains = ["chatgpt.com"];
+    this.inputSelector = '#prompt-textarea';
     this.sendButtonSelector = 'button[data-testid="send-button"]'; // Use data-testid
-    this.responseSelector = '.message-bubble .text-content'; 
-    this.thinkingIndicatorSelector = '.loading-spinner'; 
-    this.responseSelectorForDOMFallback = '.message-container .response-text'; 
-    this.thinkingIndicatorSelectorForDOM = '.thinking-dots, .spinner-animation'; 
+    this.responseSelector = '.message-bubble .text-content';
+    this.thinkingIndicatorSelector = '.loading-spinner';
+    this.responseSelectorForDOMFallback = '.message-container .response-text';
+    this.thinkingIndicatorSelectorForDOM = '.thinking-dots, .spinner-animation';
     this.lastSentMessage = '';
     this.pendingResponseCallbacks = new Map();
     this.requestAccumulators = new Map();
     this.domMonitorTimer = null;
-    console.log(`[${this.name}] Provider initialized for domains: ${this.supportedDomains.join(', ')}`);
+
+    // This is now an async constructor, which is not ideal but necessary here.
+    // The registration in the main script will need to handle the promise.
+    return (async () => {
+      await this._loadSettings();
+      console.log(`[${this.name}] Provider initialized for domains: ${this.supportedDomains.join(', ')}`);
+      return this;
+    })();
+  }
+
+  _loadSettings() {
+    return new Promise((resolve) => {
+      chrome.storage.sync.get({ chatGptCaptureMethod: 'debugger' }, (items) => {
+        this.captureMethod = items.chatGptCaptureMethod;
+        console.log(`[${this.name}] Capture method set to: ${this.captureMethod}`);
+        resolve();
+      });
+    });
   }
 
   async sendChatMessage(messageContent, requestId) { // Changed parameter name
@@ -206,11 +223,24 @@ class ChatGptProvider {
   initiateResponseCapture(requestId, responseCallback) {
     console.log(`[${this.name}] initiateResponseCapture called for requestId: ${requestId}. Capture method: ${this.captureMethod}`);
     this.pendingResponseCallbacks.set(requestId, responseCallback);
-    if (this.captureMethod === "debugger") {
+    if (this.captureMethod === "websocket") {
+      console.log(`[${this.name}] WebSocket capture selected. Storing callback and waiting for proxy to be ready for requestId: ${requestId}.`);
+      
+      // Wait for the proxy to announce it's ready, then send the requestId
+      const sendRequestId = () => {
+        console.log(`[${this.name}] Proxy is ready. Sending requestId ${requestId}.`);
+        const event = new CustomEvent('chatRelay-setWebsocketRequestId', { detail: { requestId } });
+        window.dispatchEvent(event);
+      };
+
+      // The proxy might already be ready, so we check for a flag or just try to send.
+      // A more robust way is to listen for the ready signal.
+      window.addEventListener('chatRelay-proxyReady', sendRequestId, { once: true });
+    } else if (this.captureMethod === "debugger") {
       console.log(`[${this.name}] Debugger capture selected. Callback stored for requestId: ${requestId}. Ensure background script is set up for '${this.debuggerUrlPattern}'.`);
     } else if (this.captureMethod === "dom") {
       console.log(`[${this.name}] DOM capture selected. Starting DOM monitoring for requestId: ${requestId}`);
-      this._stopDOMMonitoring(); 
+      this._stopDOMMonitoring();
       this._startDOMMonitoring(requestId);
     } else {
       console.error(`[${this.name}] Unknown capture method: ${this.captureMethod}`);
@@ -290,6 +320,48 @@ class ChatGptProvider {
 
     if (accumulator.isDefinitelyFinal) {
       console.log(`[${this.name}] handleDebuggerData - CLEANING UP for ${requestId} as accumulator.isDefinitelyFinal is true.`);
+      this.pendingResponseCallbacks.delete(requestId);
+      this.requestAccumulators.delete(requestId);
+    }
+  }
+
+  handleWebSocketData(requestId, rawData) {
+    const callback = this.pendingResponseCallbacks.get(requestId);
+    if (!callback) {
+      console.warn(`[${this.name}] handleWebSocketData - No callback for requestId: ${requestId}.`);
+      return;
+    }
+
+    let accumulator = this.requestAccumulators.get(requestId);
+    if (!accumulator) {
+      accumulator = { text: "", isDefinitelyFinal: false, currentProcessingStage: undefined };
+      this.requestAccumulators.set(requestId, accumulator);
+    }
+
+    if (accumulator.isDefinitelyFinal) {
+      return;
+    }
+
+    const parseOutput = this.parseDebuggerResponse(rawData, accumulator.currentProcessingStage);
+    accumulator.currentProcessingStage = parseOutput.newProcessingStage;
+
+    if (parseOutput.text !== null || parseOutput.operation === "replace") {
+      if (parseOutput.operation === "replace") {
+        accumulator.text = parseOutput.text;
+      } else {
+        accumulator.text += parseOutput.text;
+      }
+    }
+
+    if (parseOutput.isFinalResponse) {
+      accumulator.isDefinitelyFinal = true;
+    }
+
+    if (parseOutput.text !== null || accumulator.isDefinitelyFinal || parseOutput.operation === "replace") {
+      callback(requestId, accumulator.text, accumulator.isDefinitelyFinal);
+    }
+
+    if (accumulator.isDefinitelyFinal) {
       this.pendingResponseCallbacks.delete(requestId);
       this.requestAccumulators.delete(requestId);
     }
@@ -659,9 +731,13 @@ class ChatGptProvider {
   }
 
   getStreamingApiPatterns() {
-    if (this.captureMethod === "debugger" && this.debuggerUrlPattern) {
-      return [{ urlPattern: this.debuggerUrlPattern, requestStage: "Response" }];
+    if (this.captureMethod === "debugger") {
+      return [
+        { urlPattern: "*chatgpt.com/backend-api/conversation*", requestStage: "Response" },
+        { urlPattern: "*chatgpt.com/backend-api/f/conversation*", requestStage: "Response" }
+      ];
     }
+    // For websocket method, we don't need to return any patterns as we are not using the debugger.
     return [];
   }
 
@@ -707,13 +783,14 @@ class ChatGptProvider {
 }
 
 if (window.providerUtils && window.providerUtils.registerProvider) {
-  const providerInstance = new ChatGptProvider();
-  window.providerUtils.registerProvider(
-    providerInstance.name,
-    providerInstance.supportedDomains,
-    providerInstance
-  );
-  console.log(`[${providerInstance.name}] Provider registered with providerUtils.`);
+  new ChatGptProvider().then(providerInstance => {
+    window.providerUtils.registerProvider(
+      providerInstance.name,
+      providerInstance.supportedDomains,
+      providerInstance
+    );
+    console.log(`[${providerInstance.name}] Provider registered with providerUtils.`);
+  });
 } else {
   console.error("[ChatGptProvider] providerUtils not found. Registration failed. Ensure provider-utils.js is loaded before chatgpt.js");
 }

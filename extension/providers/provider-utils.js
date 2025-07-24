@@ -22,14 +22,30 @@ const providerMap = {}; // Stores { domain: { name: providerName, instance: prov
 
 // Register a provider with its supported domains and instance
 function registerProvider(providerName, domains, providerInstance) {
+  console.log("PROVIDER-UTILS: registerProvider called with:", { providerName, domains, providerInstance: !!providerInstance });
+  
   if (!providerName || !Array.isArray(domains) || !providerInstance) {
     console.error("PROVIDER-UTILS: Invalid arguments for registerProvider.", { providerName, domains, providerInstance });
     return;
   }
+  
   domains.forEach(domain => {
     providerMap[domain] = { name: providerName, instance: providerInstance };
+    console.log("PROVIDER-UTILS: Mapped domain", domain, "to provider", providerName);
   });
+  
   console.log("PROVIDER-UTILS: Registered provider:", providerName, "for domains:", domains);
+  console.log("PROVIDER-UTILS: Current providerMap after registration:", providerMap);
+
+  // Dispatch a custom event to notify that a provider has been registered
+  const event = new CustomEvent('providerRegistered', {
+    detail: {
+      providerName: providerName,
+      domains: domains
+    }
+  });
+  window.dispatchEvent(event);
+  console.log("PROVIDER-UTILS: Dispatched 'providerRegistered' event for", providerName);
 }
 
 // Detect the provider for the current page
@@ -41,7 +57,7 @@ function detectProvider(hostname) {
   }
 
   console.log("PROVIDER-UTILS: Detecting provider for hostname:", hostname);
-  console.log("PROVIDER-UTILS: Current providerMap:", JSON.stringify(providerMap)); // Log current map for debugging
+  console.log("PROVIDER-UTILS: Current providerMap:", providerMap); // Log current map for debugging
 
   for (const domainKey in providerMap) {
     if (hostname.includes(domainKey)) {
@@ -58,5 +74,9 @@ function detectProvider(hostname) {
 // Export the functions
 window.providerUtils = {
   detectProvider,
-  registerProvider // Expose registerProvider
+  registerProvider, // Expose registerProvider
+  getProviderForUrl: (url) => {
+    const hostname = new URL(url).hostname;
+    return detectProvider(hostname);
+  }
 };

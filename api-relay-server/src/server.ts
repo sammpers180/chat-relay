@@ -616,8 +616,26 @@ const apiRouter: Router = express.Router();
 
 apiRouter.post('/chat/completions', async (req: Request, res: Response): Promise<void> => {
   const requestId = requestCounter++;
-  const { messages, model, temperature, max_tokens } = req.body;
+  const { messages, model, temperature, max_tokens, stream } = req.body;
+
+  // Basic validation
+  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    console.error(`SERVER.TS: Invalid request to /chat/completions - 'messages' is missing or not a non-empty array. Body:`, req.body);
+    res.status(400).json({ error: { message: "Request body must contain a non-empty 'messages' array." } });
+    return;
+  }
   const userMessage = messages[messages.length - 1].content;
+  if (typeof userMessage !== 'string') {
+      console.error(`SERVER.TS: Invalid request to /chat/completions - last message 'content' is not a string. Body:`, req.body);
+      res.status(400).json({ error: { message: "The 'content' of the last message in the 'messages' array must be a string." } });
+      return;
+  }
+
+  // Acknowledge stream, but don't implement it yet to keep the fix simple.
+  if (stream) {
+    console.log(`SERVER.TS: Request ${requestId} requested streaming. The server will process this as a non-streaming request for now.`);
+  }
+
   const queuedItem: QueuedRequest = { requestId, req, res, userMessage, model, temperature, max_tokens };
   processOrQueueRequest(queuedItem).catch(e => {
       console.error(`SERVER.TS: Unhandled error from processOrQueueRequest in /chat/completions for ${requestId}:`, e);

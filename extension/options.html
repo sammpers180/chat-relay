@@ -70,7 +70,17 @@
 </head>
 <body>
   <h1>AI Chat Relay Options</h1>
-  
+
+  <h2>Provider Settings</h2>
+  <div class="form-group">
+      <label for="chatGptCaptureMethod">ChatGPT Capture Method:</label>
+      <select id="chatGptCaptureMethod">
+          <option value="debugger">Debugger API</option>
+          <option value="websocket">WebSocket Proxy</option>
+      </select>
+  </div>
+
+  <h2>Connection Settings</h2>
   <div class="form-group">
     <label for="serverHost">Server Host:</label>
     <input type="text" id="serverHost" placeholder="localhost">

@@ -1,0 +1,27 @@
+2025-07-23 19:59:07,706 - INFO - context_portal_mcp.main - File logging configured to: c:/Users/jmoore/Coding-Projects/chat-relay\context_portal\./logs/conport.log
+2025-07-23 19:59:07,706 - INFO - context_portal_mcp.main - Parsed CLI args: Namespace(host='127.0.0.1', port=8000, workspace_id='c:/Users/jmoore/Coding-Projects/chat-relay', mode='stdio', log_file='./logs/conport.log', log_level='INFO')
+2025-07-23 19:59:07,706 - INFO - context_portal_mcp.main - Starting ConPort in STDIO mode using FastMCP for initial CLI arg workspace_id: c:/Users/jmoore/Coding-Projects/chat-relay
+2025-07-23 19:59:07,706 - INFO - context_portal_mcp.main - STDIO mode started. Workspace will be initialized on the first tool call.
+2025-07-23 19:59:07,707 - INFO - context_portal_mcp.main - Adding 500ms startup delay for stdio mode.
+2025-07-23 19:59:08,230 - INFO - context_portal_mcp.main - ConPort FastMCP server lifespan starting.
+2025-07-23 19:59:08,236 - INFO - mcp.server.lowlevel.server - Processing request of type ListToolsRequest
+2025-07-23 19:59:08,241 - INFO - mcp.server.lowlevel.server - Processing request of type ListResourcesRequest
+2025-07-23 19:59:08,243 - INFO - mcp.server.lowlevel.server - Processing request of type ListResourceTemplatesRequest
+2025-07-23 23:26:40,968 - INFO - context_portal_mcp.main - ConPort FastMCP server lifespan shutting down. Closing all DB connections.
+2025-07-23 23:27:39,416 - INFO - context_portal_mcp.main - File logging configured to: c:/Users/jmoore/Coding-Projects/chat-relay\context_portal\./logs/conport.log
+2025-07-23 23:27:39,416 - INFO - context_portal_mcp.main - Parsed CLI args: Namespace(host='127.0.0.1', port=8000, workspace_id='c:/Users/jmoore/Coding-Projects/chat-relay', mode='stdio', log_file='./logs/conport.log', log_level='INFO')
+2025-07-23 23:27:39,417 - INFO - context_portal_mcp.main - Starting ConPort in STDIO mode using FastMCP for initial CLI arg workspace_id: c:/Users/jmoore/Coding-Projects/chat-relay
+2025-07-23 23:27:39,417 - INFO - context_portal_mcp.main - STDIO mode started. Workspace will be initialized on the first tool call.
+2025-07-23 23:27:39,417 - INFO - context_portal_mcp.main - Adding 500ms startup delay for stdio mode.
+2025-07-23 23:27:39,945 - INFO - context_portal_mcp.main - ConPort FastMCP server lifespan starting.
+2025-07-23 23:27:39,952 - INFO - context_portal_mcp.main - ConPort FastMCP server lifespan shutting down. Closing all DB connections.
+2025-07-23 23:27:42,658 - INFO - context_portal_mcp.main - File logging configured to: c:/Users/jmoore/Coding-Projects/chat-relay\context_portal\./logs/conport.log
+2025-07-23 23:27:42,658 - INFO - context_portal_mcp.main - Parsed CLI args: Namespace(host='127.0.0.1', port=8000, workspace_id='c:/Users/jmoore/Coding-Projects/chat-relay', mode='stdio', log_file='./logs/conport.log', log_level='INFO')
+2025-07-23 23:27:42,659 - INFO - context_portal_mcp.main - Starting ConPort in STDIO mode using FastMCP for initial CLI arg workspace_id: c:/Users/jmoore/Coding-Projects/chat-relay
+2025-07-23 23:27:42,659 - INFO - context_portal_mcp.main - STDIO mode started. Workspace will be initialized on the first tool call.
+2025-07-23 23:27:42,659 - INFO - context_portal_mcp.main - Adding 500ms startup delay for stdio mode.
+2025-07-23 23:27:43,198 - INFO - context_portal_mcp.main - ConPort FastMCP server lifespan starting.
+2025-07-23 23:27:43,999 - INFO - mcp.server.lowlevel.server - Processing request of type ListToolsRequest
+2025-07-23 23:27:46,587 - INFO - mcp.server.lowlevel.server - Processing request of type ListResourcesRequest
+2025-07-23 23:27:46,590 - INFO - mcp.server.lowlevel.server - Processing request of type ListResourceTemplatesRequest
+2025-07-23 23:54:51,258 - INFO - context_portal_mcp.main - ConPort FastMCP server lifespan shutting down. Closing all DB connections.

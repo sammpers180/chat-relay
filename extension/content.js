@@ -30,6 +30,7 @@ let responseMonitoringTimers = []; // Keep track of all monitoring timers
 let captureAttempts = 0; // Track how many capture attempts we've made
 const MAX_CAPTURE_ATTEMPTS = 30; // Maximum number of capture attempts
 const CAPTURE_DELAY = 1000; // 1 second between capture attempts
+let isFirstInitialization = true;
 
 // Helper function to find potential input fields and buttons
 function findPotentialSelectors() {
@@ -75,43 +76,59 @@ function findPotentialSelectors() {
 }
 
 function initializeContentRelay() {
-    if (setupComplete) {
-        console.log(CS_LOG_PREFIX, "Initialization already attempted or complete.");
-        return;
-    }
+    // This function can be called multiple times if a provider registers late.
+    // We no longer use setupComplete to block re-entry.
     console.log(CS_LOG_PREFIX, 'Initializing content relay...');
 
     // Provider Detection
+    console.log(CS_LOG_PREFIX, 'Checking for window.providerUtils...');
+    console.log(CS_LOG_PREFIX, 'window.providerUtils exists:', !!window.providerUtils);
+    
     if (window.providerUtils) {
+        console.log(CS_LOG_PREFIX, 'Calling detectProvider with hostname:', window.location.hostname);
         const detectedProvider = window.providerUtils.detectProvider(window.location.hostname); // New detection method
         provider = detectedProvider; // Update the global provider instance
 
-        console.log(CS_LOG_PREFIX, 'Detected provider:', provider ? provider.name : 'None');
+        if (provider) {
+            console.log(CS_LOG_PREFIX, 'Detected provider:', provider.name);
+            console.log(CS_LOG_PREFIX, 'Provider details:', {
+                name: provider.name,
+                supportedDomains: provider.supportedDomains,
+                captureMethod: provider.captureMethod
+            });
 
-        if (provider && typeof provider.getStreamingApiPatterns === 'function') {
-            const patternsFromProvider = provider.getStreamingApiPatterns();
-            console.log(CS_LOG_PREFIX, 'Retrieved patterns from provider:', patternsFromProvider);
+            // Pattern setup logic only runs if a provider is found
+            if (typeof provider.getStreamingApiPatterns === 'function' && provider.captureMethod === 'debugger') {
+                const patternsFromProvider = provider.getStreamingApiPatterns();
+                console.log(CS_LOG_PREFIX, 'Retrieved patterns from provider:', patternsFromProvider);
 
-            if (patternsFromProvider && patternsFromProvider.length > 0) {
-                chrome.runtime.sendMessage({
-                    type: "SET_DEBUGGER_TARGETS",
-                    providerName: provider.name,
-                    patterns: patternsFromProvider
-                }, response => {
-                    if (chrome.runtime.lastError) {
-                        console.error(CS_LOG_PREFIX, 'Error sending SET_DEBUGGER_TARGETS:', chrome.runtime.lastError.message);
-                    } else {
-                        console.log(CS_LOG_PREFIX, 'SET_DEBUGGER_TARGETS message sent, response:', response);
-                    }
-                });
+                if (patternsFromProvider && patternsFromProvider.length > 0) {
+                    chrome.runtime.sendMessage({
+                        type: "SET_DEBUGGER_TARGETS",
+                        providerName: provider.name,
+                        patterns: patternsFromProvider
+                    }, response => {
+                        if (chrome.runtime.lastError) {
+                            console.error(CS_LOG_PREFIX, 'Error sending SET_DEBUGGER_TARGETS:', chrome.runtime.lastError.message);
+                        } else {
+                            console.log(CS_LOG_PREFIX, 'SET_DEBUGGER_TARGETS message sent, response:', response);
+                        }
+                    });
+                } else {
+                    console.log(CS_LOG_PREFIX, 'No patterns returned by provider or patterns array is empty.');
+                }
             } else {
-                console.log(CS_LOG_PREFIX, 'No patterns returned by provider or patterns array is empty.');
+                if (typeof provider.getStreamingApiPatterns !== 'function') {
+                    console.warn(CS_LOG_PREFIX, `Provider '${provider.name}' is missing the getStreamingApiPatterns method.`);
+                } else if (provider.captureMethod !== 'debugger') {
+                    console.log(CS_LOG_PREFIX, `Provider '${provider.name}' is using capture method '${provider.captureMethod}', not 'debugger'. Skipping debugger pattern setup.`);
+                }
             }
         } else {
-            if (provider) {
-                console.log(CS_LOG_PREFIX, `Provider '${provider.name}' found, but getStreamingApiPatterns method is missing or not a function.`);
+            if (isFirstInitialization) {
+                console.log(CS_LOG_PREFIX, 'Initial check: No provider registered. Waiting for provider to register...');
             } else {
-                console.log(CS_LOG_PREFIX, 'No current provider instance found to get patterns from.');
+                console.warn(CS_LOG_PREFIX, 'Provider not detected on re-initialization.');
             }
         }
     } else {
@@ -148,8 +165,11 @@ function initializeContentRelay() {
         console.warn(CS_LOG_PREFIX, "No provider detected. Some provider-specific features (response capture, element polling) will not be initialized.");
     }
     
-    setupComplete = true; 
-    console.log(CS_LOG_PREFIX, "Content relay initialization sequence finished.");
+    if (!setupComplete) {
+      setupComplete = true;
+      console.log(CS_LOG_PREFIX, "Initial content relay setup sequence finished.");
+    }
+    isFirstInitialization = false;
 }
 
 // Poll for elements that might be loaded dynamically
@@ -729,11 +749,11 @@ function setupMessageListeners() { // Renamed from setupAutomaticMessageSending
         sendResponse({ success: false, error: "Provider or sendChatMessage method missing." });
       }
       return true; // Indicate async response
-    } else if (message.type === "DEBUGGER_RESPONSE") {
-      console.log(CS_LOG_PREFIX, "Received DEBUGGER_RESPONSE message object:", JSON.stringify(message)); // Log full received message
-      console.log(CS_LOG_PREFIX, `Processing DEBUGGER_RESPONSE for app requestId: ${currentRequestId}. Debugger requestId: ${message.requestId}. Data length: ${message.data ? message.data.length : 'null'}`);
+    } else if (message.type === "DEBUGGER_RESPONSE" || message.type === "PROVIDER_DEBUGGER_EVENT") {
+      console.log(CS_LOG_PREFIX, `Received ${message.type} message object:`, JSON.stringify(message)); // Log full received message
+      console.log(CS_LOG_PREFIX, `Processing ${message.type} for app requestId: ${currentRequestId}. Debugger requestId: ${message.requestId}. Data length: ${message.data ? message.data.length : 'null'}`);
       if (!provider) {
-          console.error(CS_LOG_PREFIX, "Received DEBUGGER_RESPONSE but no provider is active.");
+          console.error(CS_LOG_PREFIX, `Received ${message.type} but no provider is active.`);
           sendResponse({ success: false, error: "No provider active." });
           return true;
       }
@@ -746,18 +766,22 @@ function setupMessageListeners() { // Renamed from setupAutomaticMessageSending
       // associated by background.js. We should use this directly.
       // The content.js currentRequestId might have been cleared if the provider.sendChatMessage failed,
       // but the debugger stream might still be valid for message.requestId.
+      const eventDetail = message.detail || message; // Handle both direct and nested details
+      const requestId = eventDetail.requestId;
+      const responseData = eventDetail.data;
+      const isFinal = eventDetail.isFinal;
+      const errorFromBackground = eventDetail.error || null;
 
-      if (!message.requestId && message.requestId !== 0) { // Check if message.requestId is missing or invalid (0 is a valid requestId)
-          console.error(CS_LOG_PREFIX, `Received DEBUGGER_RESPONSE without a valid message.requestId. Ignoring. Message:`, message);
-          sendResponse({ success: false, error: "DEBUGGER_RESPONSE missing requestId." });
+      if (requestId === undefined || requestId === null) { // Check if requestId is missing or invalid
+          console.error(CS_LOG_PREFIX, `Received ${message.type} without a valid requestId. Ignoring. Message:`, message);
+          sendResponse({ success: false, error: `${message.type} missing requestId.` });
           return true;
       }
 
       // Pass the raw data, the message's requestId, and isFinal flag to the provider
       // The provider's handleDebuggerData is responsible for calling handleProviderResponse
-      const errorFromBackground = message.error || null; // Get error from message, default to null
-      console.log(CS_LOG_PREFIX, `Calling provider.handleDebuggerData for requestId: ${message.requestId} with isFinal: ${message.isFinal}, errorFromBackground: ${errorFromBackground}`); // Log before call
-      provider.handleDebuggerData(message.requestId, message.data, message.isFinal, errorFromBackground, handleProviderResponse); // Pass errorFromBackground
+      console.log(CS_LOG_PREFIX, `Calling provider.handleDebuggerData for requestId: ${requestId} with isFinal: ${isFinal}, errorFromBackground: ${errorFromBackground}`); // Log before call
+      provider.handleDebuggerData(requestId, responseData, isFinal, errorFromBackground, handleProviderResponse); // Pass extracted data
       // Acknowledge receipt of the debugger data
       sendResponse({ success: true, message: "Debugger data (and potential error) passed to provider." });
       return true; // Indicate async response (provider will eventually call handleProviderResponse)
@@ -784,11 +808,23 @@ function setupMessageListeners() { // Renamed from setupAutomaticMessageSending
         sendResponse({ success: false, error: "Provider or stopStreaming method missing." });
       }
       return true;
+    } else if (message.action === 'HANDLE_WEBSOCKET_DATA') {
+      console.log(CS_LOG_PREFIX, `Received HANDLE_WEBSOCKET_DATA for requestId: ${message.requestId}`);
+      // Note: We use the globally scoped 'provider' variable here.
+      // It should be correctly set by the time this message is received.
+      if (provider && typeof provider.handleWebSocketData === 'function') {
+        provider.handleWebSocketData(message.requestId, message.data);
+        sendResponse({ success: true, message: "WebSocket data passed to provider." });
+      } else {
+        console.error(CS_LOG_PREFIX, "Cannot handle WebSocket data: Provider not found or does not support handleWebSocketData method.");
+        sendResponse({ success: false, error: 'Provider not found or does not support WebSocket data' });
+      }
+      return true;
     }
-
+ 
     // Handle other potential message types if needed
     // else if (message.type === '...') { ... }
-
+ 
     // If the message type isn't handled, return false or undefined
     console.log(CS_LOG_PREFIX, "Unhandled message type received:", message.type || message.action);
     // sendResponse({ success: false, error: "Unhandled message type" }); // Optional: send error back
@@ -880,12 +916,50 @@ if (document.readyState === "loading") {
 
 function attemptInitialization() {
     console.log(CS_LOG_PREFIX, "Attempting initialization...");
+    console.log(CS_LOG_PREFIX, "Current URL:", window.location.href);
+    console.log(CS_LOG_PREFIX, "Current hostname:", window.location.hostname);
+    
+    // Add event listener for late provider registration
+    window.addEventListener('providerRegistered', (e) => {
+      console.log(CS_LOG_PREFIX, `Caught 'providerRegistered' event for ${e.detail.providerName}. Re-initializing.`);
+      // Reset parts of the state before re-initializing
+      provider = null;
+      initializeContentRelay();
+    });
+
     if (window.attemptedInitialization) {
-        console.log(CS_LOG_PREFIX, "Initialization already attempted. Skipping.");
+        console.log(CS_LOG_PREFIX, "Initialization already attempted. Skipping subsequent calls to attemptInitialization.");
         return;
     }
     window.attemptedInitialization = true;
-    initializeContentRelay(); // Initialize provider detection, DOM setup, etc.
-    setupMessageListeners();  // Setup listeners for messages from background script
-    console.log(CS_LOG_PREFIX, "Initialization attempt complete. Message listeners set up.");
+    
+    try {
+        console.log(CS_LOG_PREFIX, "Starting initializeContentRelay...");
+        initializeContentRelay(); // Initialize provider detection, DOM setup, etc.
+        console.log(CS_LOG_PREFIX, "initializeContentRelay completed successfully");
+        
+        console.log(CS_LOG_PREFIX, "Starting setupMessageListeners...");
+        setupMessageListeners();  // Setup listeners for messages from background script
+        console.log(CS_LOG_PREFIX, "setupMessageListeners completed successfully");
+        
+        console.log(CS_LOG_PREFIX, "Initialization attempt complete. Message listeners set up.");
+        
+        // Send a test message to background to confirm connection
+        chrome.runtime.sendMessage({
+            type: "CONTENT_SCRIPT_LOADED",
+            url: window.location.href,
+            hostname: window.location.hostname
+        }, response => {
+            if (chrome.runtime.lastError) {
+                console.error(CS_LOG_PREFIX, 'Error sending CONTENT_SCRIPT_LOADED:', chrome.runtime.lastError.message);
+            } else {
+                console.log(CS_LOG_PREFIX, 'CONTENT_SCRIPT_LOADED sent successfully, response:', response);
+            }
+        });
+        
+    } catch (error) {
+        console.error(CS_LOG_PREFIX, "Error during initialization:", error);
+        console.error(CS_LOG_PREFIX, "Error stack:", error.stack);
+    }
 }
+

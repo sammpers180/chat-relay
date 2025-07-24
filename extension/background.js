@@ -212,36 +212,40 @@ async function forwardCommandToContentScript(command) { // command will include 
         }
 
         // Now actually send the command
-        chrome.tabs.sendMessage(targetTabIdForCommand, command, (response) => {
-          if (chrome.runtime.lastError) {
-            const errorMessage = `Error sending message to content script in tab ${targetTabIdForCommand}: ${chrome.runtime.lastError.message}`;
+        const MAX_SEND_RETRIES = 3;
+        const SEND_RETRY_DELAY = 500;
+        let sendAttempt = 0;
+
+        function sendMessageWithRetry() {
+          if (sendAttempt >= MAX_SEND_RETRIES) {
+            const errorMessage = `Failed to send message to content script in tab ${targetTabIdForCommand} after ${MAX_SEND_RETRIES} attempts.`;
             console.error(`BACKGROUND: ${errorMessage}`);
-            
-            // Send error to server
             if (relaySocket && relaySocket.readyState === WebSocket.OPEN) {
               relaySocket.send(JSON.stringify({
                 type: "CHAT_RESPONSE_ERROR",
                 requestId: command.requestId,
-                error: `Failed to send command to content script (tab ${targetTabIdForCommand}). Detail: ${chrome.runtime.lastError.message}`
+                error: errorMessage
               }));
-              console.log(`BACKGROUND: Sent CHAT_RESPONSE_ERROR to server for requestId: ${command.requestId} (content script send failed).`);
-            } else {
-              console.error(`BACKGROUND: Relay WS not OPEN, cannot send CHAT_RESPONSE_ERROR for requestId: ${command.requestId} (content script send failed).`);
             }
-
-            if (lastRequestId === command.requestId) { 
-                processingRequest = false;
-                console.log(`BACKGROUND: Reset processingRequest for requestId: ${command.requestId} (content script send failed).`);
+            if (lastRequestId === command.requestId) {
+              processingRequest = false;
             }
-            // Attempt to process the next request in the queue as this one failed at the background script level
-            processNextRequest(); 
-
-          } else {
-            console.log(`BACKGROUND: Content script in tab ${targetTabIdForCommand} acknowledged command:`, response);
-            // If content script acknowledges, it's responsible for sending a response/error back.
-            // No need to call processNextRequest() here; content script's response will trigger it.
+            processNextRequest();
+            return;
           }
-        });
+
+          sendAttempt++;
+          chrome.tabs.sendMessage(targetTabIdForCommand, command, (response) => {
+            if (chrome.runtime.lastError) {
+              console.warn(`BACKGROUND: Attempt ${sendAttempt} to send message to tab ${targetTabIdForCommand} failed: ${chrome.runtime.lastError.message}. Retrying in ${SEND_RETRY_DELAY}ms...`);
+              setTimeout(sendMessageWithRetry, SEND_RETRY_DELAY);
+            } else {
+              console.log(`BACKGROUND: Content script in tab ${targetTabIdForCommand} acknowledged command on attempt ${sendAttempt}:`, response);
+            }
+          });
+        }
+
+        sendMessageWithRetry();
 
     } else {
         const errorMsg = "Could not find any suitable tab for command.";
@@ -458,9 +462,25 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   }
 });
 
+// Listen for tab updates to inject the WebSocket proxy if needed
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'loading' && tab.url && tab.url.includes('chatgpt.com')) {
+    chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      files: ['providers/websocket-proxy.js'],
+      world: 'MAIN'
+    });
+  }
+});
 // Listen for messages from Content Scripts and Popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("BACKGROUND: Received message:", message.type || message.action, "from tabId:", sender.tab ? sender.tab.id : 'popup/unknown');
+  
+  if (message.type === "CONTENT_SCRIPT_LOADED") {
+    console.log("BACKGROUND: Content script loaded successfully on:", message.url, "hostname:", message.hostname);
+    sendResponse({ success: true, message: "Content script load acknowledged" });
+    return true;
+  }
   
   if (sender.tab && sender.tab.id) {
     activeTabId = sender.tab.id; // User's original logic for activeTabId
@@ -769,6 +789,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 console.log(`BACKGROUND: Sent CHAT_RESPONSE_ERROR (user cancelled in queue) to server for requestId: ${requestIdToStop}.`);
             }
             if (!responseSent) sendResponse({ success: true, message: `Request ${requestIdToStop} removed from queue.` });
+  } else if (message.type === 'WEBSOCKET_MESSAGE') {
+    if (activeTabId) {
+      chrome.tabs.sendMessage(activeTabId, {
+        action: 'HANDLE_WEBSOCKET_DATA',
+        requestId: lastRequestId,
+        data: message.data
+      });
+    }
             responseSent = true;
         }
     }
@@ -826,8 +854,8 @@ const providerUtils = {
     _initializeSimulatedProviders: function() {
         this.registerProvider("AIStudioProvider", ["aistudio.google.com"], { name: "AIStudioProvider" });
         this.registerProvider("GeminiProvider", ["gemini.google.com"], { name: "GeminiProvider" });
-        this.registerProvider("GeminiProvider", ["chatgpt.com"], { name: "ChatGPTProvider" });
-        this.registerProvider("GeminiProvider", ["claude.ai"], { name: "ClaudeProvider" });
+        this.registerProvider("ChatGPTProvider", ["chatgpt.com"], { name: "ChatGPTProvider" });
+        this.registerProvider("ClaudeProvider", ["claude.ai"], { name: "ClaudeProvider" });
 
     }
 };
