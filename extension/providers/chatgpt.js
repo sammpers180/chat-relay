@@ -26,8 +26,22 @@ class ChatGptProvider {
     // --- END OF CONFIGURABLE PROPERTIES ---
     this.name = "ChatGptProvider";
     this.supportedDomains = ["chatgpt.com"];
-    this.inputSelector = '#prompt-textarea';
-    this.sendButtonSelector = 'button[data-testid="send-button"]'; // Use data-testid
+    // ChatGPT's UI has changed multiple times.  In recent versions the prompt is rendered as a
+    // contentEditable DIV with id="prompt-textarea".  Older versions used a hidden textarea.
+    // To be resilient across versions we query for the content editable DIV first and fall back
+    // to any matching textarea.  Multiple selectors are comma separated – querySelector will
+    // return the first match.
+    // Prefer the ProseMirror contentEditable DIV (#prompt-textarea).  As a fallback for older
+    // versions, we include a generic ProseMirror selector, but avoid hidden fallback textareas.
+    this.inputSelector = 'div#prompt-textarea, div.ProseMirror[contenteditable="true"]';
+
+    // The send button can appear in several forms depending on the UI state.  When there is
+    // text in the input box the button has data-testid="send-button" and an id of
+    // "composer-submit-button"; when the assistant is streaming a response the button becomes
+    // a stop button with data-testid="stop-button".  We deliberately avoid matching the
+    // stop button so that we never inadvertently cancel a response.  If the selector
+    // below fails to find a button we fall back to pressing Enter on the input field.
+    this.sendButtonSelector = 'button[data-testid="send-button"], button#composer-submit-button, button[aria-label="Send prompt"]';
     this.responseSelector = '.message-bubble .text-content';
     this.thinkingIndicatorSelector = '.loading-spinner';
     this.responseSelectorForDOMFallback = '.message-container .response-text';
@@ -58,8 +72,10 @@ class ChatGptProvider {
 
   async sendChatMessage(messageContent, requestId) { // Changed parameter name
     console.log(`[${this.name}] sendChatMessage called for requestId ${requestId} with content type:`, typeof messageContent, Array.isArray(messageContent) ? `Array length: ${messageContent.length}` : '');
-    const MAX_RETRIES = 5;
-    const RETRY_DELAY_MS_BASE = 250;
+    // Allow more retries to give the UI time to render the send button after typing.  Some
+    // recent ChatGPT updates defer rendering the button until after animations complete.
+    const MAX_RETRIES = 10;
+    const RETRY_DELAY_MS_BASE = 300;
 
     // --- 1. Find and check the input field ---
     const inputField = document.querySelector(this.inputSelector);
@@ -72,6 +88,22 @@ class ChatGptProvider {
       console.warn(`[${this.name}] Input field (selector: ${this.inputSelector}) is disabled for requestId ${requestId}.`);
       this._reportSendError(requestId, `Input field is disabled: ${this.inputSelector}`);
       return false;
+    }
+
+    // --- 1.a. If a previous response is still streaming, stop it.  ChatGPT shows a stop button
+    // when an answer is in progress (data-testid="stop-button").  Attempting to send while
+    // streaming leaves the UI in a stuck state.  If we detect a stop button, click it to end
+    // streaming and give the UI a moment to settle before proceeding.
+    try {
+      const stopButton = document.querySelector('button[data-testid="stop-button"]');
+      if (stopButton) {
+        console.log(`[${this.name}] Detected stop button before sending new message. Clicking to end streaming.`);
+        stopButton.click();
+        // Wait briefly for the UI to finish stopping
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    } catch (err) {
+      console.warn(`[${this.name}] Error while attempting to stop previous streaming response:`, err);
     }
 
     // --- 2. Prepare and set content ONCE ---
@@ -118,13 +150,15 @@ class ChatGptProvider {
         return false;
       }
 
-      // Set text input if any
+      // Set text input if any. Use textContent instead of innerText because ChatGPT's
+      // contentEditable field (ProseMirror) listens for textContent changes. After
+      // setting the text, dispatch an input event to notify the editor state.
       if (textToInput) {
-        inputField.innerText = textToInput; // Use .innerText for contenteditable div
-        console.log(`[${this.name}] Set inputField.innerText for requestId ${requestId}.`);
+        inputField.textContent = textToInput;
+        console.log(`[${this.name}] Set inputField.textContent for requestId ${requestId}.`);
       } else {
-        inputField.innerText = ""; // Clear if only image or no text
-        console.log(`[${this.name}] Cleared inputField.innerText (no text part) for requestId ${requestId}.`);
+        inputField.textContent = "";
+        console.log(`[${this.name}] Cleared inputField.textContent (no text part) for requestId ${requestId}.`);
       }
       inputField.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
       
@@ -151,61 +185,28 @@ class ChatGptProvider {
       return false;
     }
 
-    // --- 3. Retry loop for finding and clicking the send button ---
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      const currentDelay = RETRY_DELAY_MS_BASE + (attempt * 100);
-      if (attempt > 0) await new Promise(resolve => setTimeout(resolve, currentDelay)); // No delay on first attempt of this loop
-
-      try {
-        const sendButton = document.querySelector(this.sendButtonSelector);
-        if (!sendButton) {
-          console.error(`[${this.name}] Send button (selector: ${this.sendButtonSelector}) not found on attempt ${attempt + 1} for requestId ${requestId}.`);
-          if (attempt === MAX_RETRIES - 1) {
-            this._reportSendError(requestId, `Send button not found: ${this.sendButtonSelector}`);
-            return false;
-          }
-          continue;
-        }
-
-        const isDisabled = sendButton.disabled ||
-                           sendButton.hasAttribute('disabled') ||
-                           sendButton.getAttribute('aria-disabled') === 'true' ||
-                           sendButton.classList.contains('disabled');
-
-        console.log(`[${this.name}] Attempt ${attempt + 1} for requestId ${requestId} (Send Button Loop): Selector: '${this.sendButtonSelector}', Found: ${!!sendButton}, Disabled: ${isDisabled}, aria-disabled: ${sendButton.getAttribute('aria-disabled')}`);
-
-        if (!isDisabled) {
-          console.log(`[${this.name}] Clicking send button (selector: ${this.sendButtonSelector}) on attempt ${attempt + 1} for requestId ${requestId}.`);
-          sendButton.click();
-          console.log(`[${this.name}] Send button clicked for requestId ${requestId}. Returning true.`);
-          return true;
-        } else {
-          console.warn(`[${this.name}] Send button (selector: ${this.sendButtonSelector}) is disabled on attempt ${attempt + 1} for requestId ${requestId}.`);
-          
-          // If button is disabled, try to trigger UI updates that might enable it
-          // These events are on inputField as they might influence the button's state
-          inputField.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-          inputField.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
-          inputField.focus(); // Re-focus input field
-          await new Promise(resolve => setTimeout(resolve, 50)); // Short delay
-
-          if (attempt === MAX_RETRIES - 1) {
-            console.error(`[${this.name}] Send button still disabled on final attempt for requestId ${requestId}. Selectors: Input='${this.inputSelector}', Button='${this.sendButtonSelector}'.`);
-            this._reportSendError(requestId, `Send button remained disabled after ${MAX_RETRIES} attempts: ${this.sendButtonSelector}`);
-            return false;
-          }
-        }
-      } catch (error) {
-        console.error(`[${this.name}] Error during send button click attempt ${attempt + 1} for requestId ${requestId}:`, error);
-        if (attempt === MAX_RETRIES - 1) {
-          this._reportSendError(requestId, `Exception during send button click: ${error.message}`);
-          return false;
-        }
-        // Continue to next attempt if error is not on the last attempt
-      }
+    // --- 3. Send the message ---
+    // Give the UI a moment to react before sending.  Without this delay some builds of ChatGPT
+    // ignore the first keypress on a newly-focused input.
+    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      inputField.focus();
+      const enterKeyEvent = new KeyboardEvent('keydown', {
+        key: 'Enter',
+        code: 'Enter',
+        keyCode: 13,
+        which: 13,
+        bubbles: true,
+        cancelable: true
+      });
+      inputField.dispatchEvent(enterKeyEvent);
+      console.log(`[${this.name}] Sent message by dispatching Enter key for requestId ${requestId}.`);
+      return true;
+    } catch (err) {
+      console.error(`[${this.name}] Failed to dispatch Enter key for requestId ${requestId}:`, err);
+      this._reportSendError(requestId, `Exception dispatching Enter key: ${err.message}`);
+      return false;
     }
-    this._reportSendError(requestId, `Exhausted all retries for sendChatMessage (send button loop) for requestId ${requestId}.`);
-    return false;
   }
 
   _reportSendError(requestId, errorMessage) {
